@@ -1,0 +1,134 @@
+:root {
+    --mutecol:#6A66B4;
+}
+
+.op-register {
+    background:#2A2D4E;
+    height:100vh;
+    width:100vw;
+    position:relative;
+}
+
+.op-register-mat {
+    padding:125px;
+    background:rgb(55, 58, 105);
+    box-shadow:0px 0px 15px -5px rgba(0, 0, 0, .5);
+    position:absolute;
+    border-radius:5px;
+    top:50%;
+    left:50%;
+    margin-right:50%;
+    transform:translate(-50%, -50%);
+}
+
+.op-register-mat-form-input {
+    --marginlr:25px;
+    --marginud:15px;
+
+    width:215px;
+    margin-left:var(--marginlr);
+    margin-right:var(--marginlr);
+    margin-top:var(--marginud);
+    margin-bottom:var(--marginud);
+    position:relative;
+    border-bottom:1px solid var(--mutecol);
+    transition:.3s;
+}
+
+.op-register-mat-form-input.infocus {
+    border-bottom:1px solid white;
+}
+
+.op-register-mat-form-input-mat {
+    width:100%;
+    font-size:1.1em;
+    color:white;
+    z-index:5;
+    position:relative;
+    height:50px;
+}
+
+.op-register-mat-form-input-placeholder {
+    color:var(--mutecol);
+    position:absolute;
+    text-transform:uppercase;
+    font-weight:500;
+    font-family:"Roboto";
+    font-size:1em;
+    top:calc(50% + 4px);
+    transform:translateY(-50%);
+    left:0;
+    z-index:3;
+    transition:.25s;
+}
+
+.op-register-mat-form-input.infocus .op-register-mat-form-input-placeholder,
+.op-register-mat-form-input-mat:valid ~ .op-register-mat-form-input-placeholder {
+    top:-10px;
+    font-size:.9em;
+    transform:translateY(0px);
+}
+
+.op-register-mat-form-line {
+    display:flex;
+    flex-wrap:nowrap;
+}
+
+.op-register-mat-form-title {
+    color:white;
+    font-weight:300;
+    font-family:"Lato";   
+}
+
+.op-register-mat-form-upfile {
+    --margin:30px;
+    --height:35px;
+
+    background:#9B5AEB;
+    width:165px;
+    height:var(--height);
+    border-radius:5px;
+    line-height:var(--height);
+    box-shadow:0px 1px 2px 0px rgba(0, 0, 0, .4);
+    font-size:.9em;
+    margin-top:var(--margin);
+    margin-bottom:var(--margin);
+    text-align:center;
+    border:1px solid transparent;
+    transition:.2s;
+}
+
+.op-register-mat-form-upfile:focus {
+    border:1px solid green;
+}
+
+.op-register-mat-form-upfile:active {
+    transform:scale(.95);
+    box-shadow:0px 0px 2px 0px rgba(0, 0, 0, .75);
+}
+
+.op-register-mat-form-submit {
+    background:#7d3eca;
+    height:40px;
+    width:80%;
+    border-radius:3px;
+    font-family:"Quicksand";
+    font-weight:400;
+    font-size:.95em;
+}
+
+.op-register-mat-form-submit:active {
+    transform:scale(.925);
+}
+
+.op-register-mat-form-upfile,
+.op-register-mat-form-submit {
+    display:block;
+    margin-left:auto;
+    margin-right:auto;
+    cursor:pointer;
+    color:white;
+    text-transform:uppercase;
+    transition:.1s;
+    user-select:none;
+}

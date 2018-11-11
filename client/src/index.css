@@ -21,6 +21,13 @@ html, body {
   background:transparent;
 }
 
+.hidden {
+  opacity:0;
+  display:none;
+  visibility:hidden;
+  transition:9999s 9999s;
+}
+
 .gl-nav,
 .rn {
   height:100vh;
