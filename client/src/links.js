@@ -1,7 +1,7 @@
 const links = {
     "HOME_PAGE": {
-        absolute: '/',
-        route: '/'
+        absolute: '/home',
+        route: '/home'
     }
 }
 
