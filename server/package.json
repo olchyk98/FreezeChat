@@ -19,5 +19,13 @@
   "bugs": {
     "url": "https://github.com/olchyk98/freezeChat/issues"
   },
-  "homepage": "https://github.com/olchyk98/freezeChat#readme"
+  "homepage": "https://github.com/olchyk98/freezeChat#readme",
+  "dependencies": {
+    "apollo-server": "^2.2.0",
+    "apollo-server-express": "^2.2.0",
+    "cors": "^2.8.5",
+    "express": "^4.16.4",
+    "graphql": "^14.0.2",
+    "mongoose": "^5.3.11"
+  }
 }
