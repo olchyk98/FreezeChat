@@ -35,6 +35,13 @@
     transition:.3s;
 }
 
+.op-register-mat-loginform .op-register-mat-form-input {
+    --margin:40px;
+    
+    margin-top:var(--margin);
+    margin-bottom:var(--margin);
+}
+
 .op-register-mat-form-input.infocus {
     border-bottom:1px solid white;
 }
@@ -63,7 +70,7 @@
 }
 
 .op-register-mat-form-input.infocus .op-register-mat-form-input-placeholder,
-.op-register-mat-form-input-mat:valid ~ .op-register-mat-form-input-placeholder {
+.op-register-mat-form-input-mat.filled ~ .op-register-mat-form-input-placeholder {
     top:-10px;
     font-size:.9em;
     transform:translateY(0px);
@@ -78,6 +85,10 @@
     color:white;
     font-weight:300;
     font-family:"Lato";   
+}
+
+.op-register-mat-loginform .op-register-mat-form-title {
+    margin-bottom:-5px;
 }
 
 .op-register-mat-form-upfile {
@@ -117,6 +128,10 @@
     font-size:.95em;
 }
 
+.op-register-mat-loginform .op-register-mat-form-submit {
+    margin-top:-10px;
+}
+
 .op-register-mat-form-submit:active {
     transform:scale(.925);
 }
@@ -131,4 +146,38 @@
     text-transform:uppercase;
     transition:.1s;
     user-select:none;
+}
+
+.op-register-mat-form-err {
+    text-align:center;
+    font-family:"Quicksand";
+    font-weight:400;
+    color:red;
+    width:100%;
+    text-transform:uppercase;
+}
+
+.op-register-mat-form {
+    --trans:.4s;
+
+    max-height:0;
+    overflow:hidden;
+    max-width:0;
+    opacity:0;
+    transition:var(--trans);
+}
+
+.op-register-mat-form.visible {
+    transition:var(--trans) var(--trans);
+    max-height:999px;
+    max-width:999px;
+    opacity:1;
+}
+
+.op-register-mat-toggstage {
+    font-family:"Quicksand";
+    font-weight:400;
+    color:white;
+    cursor:pointer;
+    font-size:1.2em;
 }

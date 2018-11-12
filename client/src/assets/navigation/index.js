@@ -1,9 +1,13 @@
 import React, { Component } from 'react';
 import './main.css';
 
-import links from '../../links';
+import { connect } from 'react-redux';
+import { gql } from 'apollo-boost';
 
-const image = "https://scontent-arn2-1.cdninstagram.com/vp/ece02e9760259dc0d04dcaf6fe693e0e/5C6F03FD/t51.2885-19/s150x150/37628995_765658007113147_8807396603036958720_n.jpg";
+import links from '../../links';
+import client from '../../apollo';
+import { cookieControl } from '../../glTools';
+import apiPath from '../../api';
 
 const Button = ({ icon, title }) => (
     <button className="gl-nav-mat-btn definp">
@@ -13,15 +17,37 @@ const Button = ({ icon, title }) => (
 )
 
 class App extends Component {
+    componentDidMount() {
+        let { id, authToken } = cookieControl.get("userdata");
+        client.query({
+            query: gql`
+                query($id: ID!, $authToken: String!) {
+                    user(id: $id, authToken: $authToken) {
+                        id,
+                        name,
+                        avatar
+                    }
+                }
+            `,
+            variables: {
+                id, authToken
+            }
+        }).then(({ data: { user } }) => {
+            if(!user) return this.failSession();
+
+            this.props.updateSession(user);
+        }).catch(this.failSession);
+    }
+
     render() {
         return(
             <div className="gl-nav">
                 <div className="gl-nav-ac">
                     <div className="gl-nav-ac-avatar">
-                        <img src={ image } alt="" />
+                        <img src={ (this.props.user.avatar) ? apiPath.storage + this.props.user.avatar : "" } alt="" />
                     </div>
                     <div className="gl-nav-ac-name">
-                        <span className="gl-nav-ac-name-mat">Oles Odynets</span>
+                        <span className="gl-nav-ac-name-mat">{ this.props.user.name || "" }</span>
                     </div>
                 </div>
                 <div className="gl-nav-mat">
@@ -61,4 +87,16 @@ class App extends Component {
     }
 }
 
-export default App;
+const mapStateToProps = ({ user }) => ({
+    user
+})
+
+const mapActionsToProps = {
+    failSession: () => ({ type: "UPDATE_ERROR_STATE", payload: true }),
+    updateSession: payload => ({ type: "SET_DATA", payload })
+}
+
+export default connect(
+    mapStateToProps,
+    mapActionsToProps
+)(App);
