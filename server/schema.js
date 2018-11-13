@@ -8,14 +8,18 @@ const {
     GraphQLInt,
     GraphQLBoolean
 } = require('graphql');
-const { GraphQLUpload } = require('apollo-server');
+const { GraphQLUpload, PubSub } = require('apollo-server');
+
+const pubsub = new PubSub();
 
 const fileSystem = require('fs');
 
 const settings = require('./settings');
 
 const {
-    user: User
+    user: User,
+    conversation: Conversation,
+    message: Message
 } = require('./models');
 
 function validateAccount(_id, authToken) {
@@ -43,6 +47,8 @@ function getExtension(filename) {
     return filename.match(/[^\\]*\.(\w+)$/)[1];
 }
 
+let str = str => str.toString();
+
 const UserType = new GraphQLObjectType({
     name: "User",
     fields: () => ({
@@ -57,6 +63,101 @@ const UserType = new GraphQLObjectType({
         lastAuthToken: {
             type: GraphQLString,
             resolve: ({ authTokens }) => authTokens[authTokens.length - 1]
+        },
+        conversations: {
+            type: new GraphQLList(ConversationType),
+            resolve: ({ id }) => Conversation.find({
+                members: {
+                    $in: [id]
+                }
+            })
+        }
+    })
+});
+
+const ConversationType = new GraphQLObjectType({
+    name: "Conversation",
+    fields: () => ({
+        id: { type: GraphQLID },
+        members: {
+            type: new GraphQLList(UserType),
+            resolve: ({ members }) => User.find({
+                _id: {
+                    $in: [members]
+                }
+            })
+        },
+        messages: {
+            type: new GraphQLList(MessageType),
+            resolve: ({ id }) => Message.find({
+                conversationID: id
+            })
+        },
+        previewTitle: {
+            type: GraphQLString,
+            args: {
+                id: { type: new GraphQLNonNull(GraphQLID) }
+            },
+            resolve: async ({ members }, { id }) => (await User.findById(
+                str(members.find( io => str(io) !== str(id) ))
+            )).name
+        },
+        previewImage: {
+            type: GraphQLString,
+            args: {
+                id: { type: new GraphQLNonNull(GraphQLID) }
+            },
+            resolve: async ({ members }, { id }) => (await User.findById(
+                str(members.find( io => str(io) !== str(id) ))
+            )).avatar
+        },
+        previewContent: {
+            type: GraphQLString,
+            resolve: async ({ id }) => {
+                let a = (await Message.find({ conversationID: id, type: "TEXT_TYPE" }).sort({ time: -1 }).limit(1))[0];
+                return (a && a.content) || "";
+            }
+        },
+        previewTime: {
+            type: GraphQLString,
+            resolve: async ({ id }) => {
+                let a = async ({ id }) => (await Message.find({ conversationID: id }).sort({ time: -1 }).limit(1))[0];
+                return (a && a.time) || "";
+            }
+        },
+        unSeenMessages: {
+            type: GraphQLInt,
+            args: {
+                id: { type: new GraphQLNonNull(GraphQLID) }
+            },
+            resolve: ({ id }, { id: _id }) => Message.count({
+                conversationID: id,
+                isSeen: false,
+                creatorID: {
+                    $ne: _id
+                }
+            })
+        }
+    })
+});
+
+const MessageType = new GraphQLObjectType({
+    name: "Message",
+    fields: () => ({
+        id: { type: GraphQLID },
+        content: { type: GraphQLString },
+        time: { type: GraphQLString },
+        creatorID: { type: GraphQLID },
+        type: { type: GraphQLString },
+        conversationID: { type: GraphQLID },
+        isSeen: { type: GraphQLBoolean },
+        conversation: {
+            type: ConversationType,
+            resolve: ({ conversationID }) => Conversation.findById(conversationID)
+        },
+        creator: {
+            type: UserType,
+            resolve: ({ creatorID }) => User.findById(creatorID)
         }
     })
 })
@@ -76,6 +177,25 @@ const RootQuery = new GraphQLObjectType({
             },
             resolve(_, { id, authToken }) {
                 return  validateAccount(id, authToken);
+            }
+        },
+        conversation: {
+            type: ConversationType,
+            args: {
+                id: { type: new GraphQLNonNull(GraphQLID) },
+                authToken: { type: new GraphQLNonNull(GraphQLString) },
+                conversationID: { type: new GraphQLNonNull(GraphQLID) }
+            },
+            async resolve(_, { id, authToken, conversationID }) {
+                let user = await validateAccount(id, authToken);
+                if(!user) return null;
+  
+                return Conversation.findOne({
+                    _id: conversationID,
+                    members: {
+                        $in: [str(user._id)]
+                    }
+                });
             }
         }
     }
@@ -100,7 +220,7 @@ const RootMutation = new GraphQLObjectType({
                         { login }
                     ]
                 }))) ? true:false;
-                if(exists) return;
+                if(exists) return null;
 
                 // Receive avatar
                 let avatarPath = '';
@@ -119,6 +239,7 @@ const RootMutation = new GraphQLObjectType({
                     login,
                     name,
                     password,
+                    status: "Free",
                     avatar: avatarPath,
                     registeredTime: new Date(),
                     authTokens: [authToken],
@@ -145,6 +266,101 @@ const RootMutation = new GraphQLObjectType({
                         authTokens: token
                     }
                 }, (__, ns) => ns);
+            }
+        },
+        setUserStatus: {
+            type: UserType,
+            args: {
+                id: { type: new GraphQLNonNull(GraphQLID) },
+                authToken: { type: new GraphQLNonNull(GraphQLString) },
+                status: { type: new GraphQLNonNull(GraphQLString) }
+            },
+            resolve(_, { id, authToken, status }) {
+                return User.findOneAndUpdate({
+                    _id: id,
+                    authTokens: {
+                        $in: [authToken]
+                    }
+                }, { status });
+            }
+        },
+        createConversation: {
+            type: ConversationType,
+            args: {
+                id: { type: new GraphQLNonNull(GraphQLID) },
+                authToken: { type: new GraphQLNonNull(GraphQLString) },
+                victimID: { type: new GraphQLNonNull(GraphQLID) }
+            },
+            async resolve(_, { id, authToken, victimID }) {
+                let user = await validateAccount(id, authToken);
+                if(!user) return null;
+
+                let conversation = await Conversation.findOne({
+                    $or: [
+                        { members: [str(user._id), str(victimID)] },
+                        { members: [str(victimID), str(user._id)] }
+                    ]
+                });
+
+                if(!conversation) {
+                    let nConv = (await (new Conversation({
+                        members: [str(user._id), str(victimID)]
+                    })).save());
+
+                    return nConv;
+                } else { // exists
+                    return conversation;
+                }
+            }
+        },
+        createMessage: {
+            type: MessageType,
+            args: {
+                id: { type: new GraphQLNonNull(GraphQLID) },
+                authToken: { type: new GraphQLNonNull(GraphQLString) },
+                content: { type: new GraphQLNonNull(GraphQLString) },
+                type: { type: new GraphQLNonNull(GraphQLString) },
+                conversationID: { type: new GraphQLNonNull(GraphQLID) }
+            },
+            async resolve(_, { id, authToken, content, type, conversationID }) {
+                let user = await validateAccount(id, authToken);
+                if(!user) return null;
+
+                let conversation = await Conversation.findById(conversationID);
+                if(!conversation || !conversation.members.includes(str(user._id))) return null;
+
+                let message = (await (new Message({
+                    content, type, conversationID,
+                    creatorID: user._id,
+                    isSeen: false,
+                    time: new Date()
+                }).save()));
+
+                return message;
+            }
+        },
+        viewMessages: {
+            type: GraphQLBoolean,
+            args: {
+                id: { type: new GraphQLNonNull(GraphQLID) },
+                authToken: { type: new GraphQLNonNull(GraphQLString) },
+                conversationID: { type: new GraphQLNonNull(GraphQLID) }
+            },
+            async resolve(_, { id, authToken, conversationID }) {
+                let user = await validateAccount(id, authToken);
+                if(!user) return false;
+
+                let conversation = await Conversation.findById(conversationID);
+                if(!conversation || !conversation.members.includes(str(user._id))) return false;
+
+                await Message.updateMany({
+                    conversationID,
+                    creatorID: {
+                        $ne: user._id
+                    }
+                }, { isSeen: true });
+
+                return true;
             }
         }
     }

@@ -33,10 +33,10 @@ class App extends Component {
                 id, authToken
             }
         }).then(({ data: { user } }) => {
-            if(!user) return this.failSession();
+            if(!user) return this.props.failSession();
 
             this.props.updateSession(user);
-        }).catch(this.failSession);
+        }).catch(this.props.failSession);
     }
 
     render() {
@@ -93,7 +93,7 @@ const mapStateToProps = ({ user }) => ({
 
 const mapActionsToProps = {
     failSession: () => ({ type: "UPDATE_ERROR_STATE", payload: true }),
-    updateSession: payload => ({ type: "SET_DATA", payload })
+    updateSession: payload => ({ type: "SET_SESSION_DATA", payload })
 }
 
 export default connect(

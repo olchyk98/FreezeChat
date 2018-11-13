@@ -7,7 +7,7 @@ function reducer(state = {}, { type, payload }) {
     });
 
     switch(type) {
-        case 'SET_DATA':
+        case 'SET_SESSION_DATA':
             a = addPush(payload);
         break;
         case 'UPDATE_ERROR_STATE':
