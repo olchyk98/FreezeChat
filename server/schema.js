@@ -89,9 +89,20 @@ const ConversationType = new GraphQLObjectType({
         },
         messages: {
             type: new GraphQLList(MessageType),
-            resolve: ({ id }) => Message.find({
-                conversationID: id
-            })
+            args: {
+                limit: { type: GraphQLInt }
+            },
+            resolve: ({ id }, { limit }) => (
+                (limit) ? (
+                    Message.find({
+                        conversationID: id
+                    }).sort({ time: -1 }).limit(limit)
+                ) : (
+                    Message.find({
+                        conversationID: id
+                    }).sort({ time: -1 })
+                )
+            )
         },
         previewTitle: {
             type: GraphQLString,
@@ -121,7 +132,7 @@ const ConversationType = new GraphQLObjectType({
         previewTime: {
             type: GraphQLString,
             resolve: async ({ id }) => {
-                let a = async ({ id }) => (await Message.find({ conversationID: id }).sort({ time: -1 }).limit(1))[0];
+                let a = (await Message.find({ conversationID: id }).sort({ time: -1 }).limit(1))[0];
                 return (a && a.time) || "";
             }
         },
@@ -196,6 +207,46 @@ const RootQuery = new GraphQLObjectType({
                         $in: [str(user._id)]
                     }
                 });
+            }
+        },
+        conversationMessages: {
+            type: new GraphQLList(MessageType),
+            args: {
+                id: { type: new GraphQLNonNull(GraphQLID) },
+                authToken: { type: new GraphQLNonNull(GraphQLString) },
+                conversationID: { type: new GraphQLNonNull(GraphQLID) },
+                cursorID: { type: GraphQLID },
+                limit: { type: GraphQLInt }
+            },
+            async resolve(_, { id, authToken, conversationID, cursorID, limit }) {
+                let user = await validateAccount(id, authToken);
+                if(!user) return null;
+
+                const sortParams = { time: -1 }
+
+                if(cursorID) {
+                    if(limit) {
+                        return Message.find({
+                            conversationID,
+                            _id: {
+                                $lt: cursorID
+                            }
+                        }).sort(sortParams).limit(limit);
+                    } else {
+                        return Message.find({
+                            conversationID,
+                            _id: {
+                                $lt: cursorID
+                            }
+                        }).sort(sortParams);
+                    }
+                } else {
+                    if(limit) {
+                        return Message.find({ conversationID }).sort(sortParams).limit(limit);
+                    } else {
+                        return Message.find({ conversationID }).sort(sortParams);
+                    }
+                }
             }
         }
     }
@@ -343,6 +394,10 @@ const RootMutation = new GraphQLObjectType({
                     creatorID: user._id
                 });
 
+                pubsub.publish('updatedChatConversation', {
+                    conversation
+                });
+
                 return message;
             }
         },
@@ -386,7 +441,7 @@ const RootSubscription = new GraphQLObjectType({
             subscribe: withFilter(
                 () => pubsub.asyncIterator('sendedChatMessage'),
                 async ({ message, members, convID, creatorID }, { id, authToken, conversationID }) => {
-                    return (
+                    return(
                         str(conversationID) !== str(convID) ||
                         str(creatorID) === str(id) ||
                         !(await validateAccount(id, authToken)) ||
@@ -396,15 +451,20 @@ const RootSubscription = new GraphQLObjectType({
             ),
             resolve: ({ message }) => message
         },
-        chatUnseenCounterUpdated:  { // can fire on increase, but it's a better way
+        chatConversationUpdated:  { // can fire on increase, but it's a better way
             type: ConversationType,
             args: {
                 id: { type: new GraphQLNonNull(GraphQLID) },
                 authToken: { type: new GraphQLNonNull(GraphQLString) }
             },
             subscribe: withFilter(
-                () => pubsub.asyncIterator('updatedConversationUnseenCounter'),
-                async () => null
+                () => pubsub.asyncIterator('updatedChatConversation'),
+                async ({ conversation }, { id, authToken }) => {
+                    return(
+                        !conversation.members.includes(str(id)) ||
+                        !(await validateAccount(id, authToken))
+                    ) ? false:true;
+                }
             ),
             resolve: ({ conversation }) => conversation
         }

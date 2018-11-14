@@ -4,6 +4,10 @@ import apiPath from '../../api';
 import { convertTime } from '../../glTools';
 
 class DisplayConversationsListConversation extends Component {
+    componentDidUpdate() {
+        setInterval(() => this.forceUpdate(), 5000); // NOTE: You should use arrow function!
+    }
+    
     render() {
         return(
             <div className="rn-home-display-conversations-list-conv">

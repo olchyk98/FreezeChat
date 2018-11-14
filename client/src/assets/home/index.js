@@ -7,9 +7,12 @@ import { gql } from 'apollo-boost';
 import { cookieControl } from '../../glTools';
 import client from '../../apollo';
 import apiPath from '../../api';
+import { convertTime } from '../../glTools';
 
 import Navigation from './Navigation';
 import DisplayConversationsList from './DisplayConversationsList';
+
+const messagesLimiter = 20; 
 
 let stickers = {},
     actions = {};
@@ -111,7 +114,7 @@ class DisplayConversations extends Component {
     }
 }
 
-const DisplayChatDisplayMessage = ({ clients, content, type, creator: { avatar } }) => {
+const DisplayChatDisplayMessage = ({ clients, content, type, creator: { avatar }, time }) => {
     function getContent() {
         let a = null;
 
@@ -155,7 +158,7 @@ const DisplayChatDisplayMessage = ({ clients, content, type, creator: { avatar }
                 { getContent() }
             </div>
             <div className="rn-home-display-chat-display-message-time">
-                <span>23:32</span>
+                <span>{ convertTime(time) }</span>
             </div>
         </div>
     );
@@ -165,7 +168,11 @@ class DisplayChatDisplay extends Component {
     constructor(props) {
         super(props);
 
-        this.anchorRef = React.createRef();
+        this.state = {
+            fetchingMore: false
+        }
+
+        this.anchorRef = this.matDisplayRef = React.createRef();
     }
 
     componentDidMount() {
@@ -173,10 +180,17 @@ class DisplayChatDisplay extends Component {
     }
 
     componentDidUpdate(nProps) {
-        if(
+        if(this.state.fetchingMore) {
+            this.matDisplayRef.scrollTo({
+                top: this.matDisplayRef - this.state.fetchingMore,
+                behavior: "smooth"
+            });
+
+            this.setState(() => ({ fetchingMore: false }));
+        } else if( // added
             nProps.messages &&
             this.props.messages &&
-            nProps.messages.length < this.props.messages.length
+            nProps.messages.length === this.props.messages.length + 1
         ) {
             this.scrollToBottom();
         }
@@ -186,9 +200,21 @@ class DisplayChatDisplay extends Component {
         this.anchorRef.scrollIntoView({ behavior: "smooth" });
     }
 
+    fetchMoreMessages = () => {
+        let a = this.matDisplayRef;
+        if(a.scrollTop === 0) {
+            this.setState(() => ({
+                fetchingMore: a.scrollHeight
+            }), this.props.fetchMoreMessages);
+        }
+    }
+
     render() {
         return(
-            <div className="rn-home-display-chat-display">
+            <div
+                className="rn-home-display-chat-display"
+                ref={ ref => this.matDisplayRef = ref }
+                onScroll={ this.fetchMoreMessages }>
                 {
                     this.props.messages.map(({ id, content, time, type, isSeen, creator }) => (
                         <DisplayChatDisplayMessage
@@ -305,6 +331,7 @@ class DisplayChat extends Component {
                 </div>
                 <DisplayChatDisplay
                     messages={ (this.props.conversation) ? this.props.conversation.messages : [] }
+                    fetchMoreMessages={ this.props.fetchMoreMessages }
                 />
                 <DisplayChatInput
                     onSendMessage={ this.props.onSendChatMessage }
@@ -326,6 +353,7 @@ class Display extends Component {
                     isVoid={ this.props.conversation === null }
                     conversation={ this.props.conversation }
                     onSendChatMessage={ this.props.onSendChatMessage }
+                    fetchMoreMessages={ this.props.fetchMoreMessages }
                 />
             </div>
         );
@@ -337,7 +365,9 @@ class App extends Component {
         super(props);
 
         this.state = {
-            conversation: null
+            conversation: null,
+            isFetchingMessages: false,
+            messagesIsFetchable: true
         }
     }
 
@@ -373,12 +403,13 @@ class App extends Component {
             if(!user) this.props.failSession();
 
             this.props.updateSession(user);
+            this.subscribeToConversations();
         }).catch(this.props.failSession);
     }
 
     subscribeToMessages = () => {
         if(!this.state.conversation || !this.state.conversation.id) return;
-        let a = this.state.conversation.id;
+        let a = this.state.conversation;
 
         let { id, authToken } = cookieControl.get("userdata");
        this.conversationSubscriptionPromise = client.subscribe({
@@ -419,9 +450,54 @@ class App extends Component {
         }});
     }
 
+    subscribeToConversations = () => {
+        let { id, authToken } = cookieControl.get("userdata");
+        client.subscribe({
+            query: gql`
+                subscription($id:ID! , $authToken: String!) {
+                    chatConversationUpdated(id: $id, authToken: $authToken) {
+                        id,
+                        previewTitle(id: $id),
+                        previewImage(id: $id),
+                        previewContent,
+                        previewTime,
+                        unSeenMessages(id: $id)
+                    }
+                }              
+            `,
+            variables: {
+                id, authToken
+            }
+        }).subscribe({next: ({ data: { chatConversationUpdated: conversation } }) => {
+            if(!this.props.user || !this.props.user.conversations) return;
+
+            let a = Array.from(this.props.user.conversations),
+                b = a.findIndex( ({ id }) => id === conversation.id );
+            if(b === -1) return;
+
+            a[b] = conversation;
+            this.props.updateSession({ conversations: a });
+        }});
+    }
+
     viewMessages = () => {
         let a = this.state.conversation;
         if(!a) return;
+
+        this.setState(() => ({
+            messagesIsFetchable: true
+        }));
+
+        {
+            let b = Array.from(this.props.user.conversations);
+            if(b) {
+                let c = b[b.findIndex( ({ id }) => a.id )];
+                if(c === -1) return;
+
+                c.unSeenMessages = 0;
+                this.props.updateSession({ conversations: b });
+            }
+        }
 
         let { id, authToken } = cookieControl.get("userdata");
         client.mutate({
@@ -436,12 +512,6 @@ class App extends Component {
             }
         }).then(({ data: { viewMessages: data } }) => {
             if(!data) return this.failSession();
-            this.setState(({ conversation }) => ({
-                conversation: {
-                    ...conversation,
-                    unSeenMessages: 0
-                }
-            }))
         }).catch(this.failSession);
     }
 
@@ -455,10 +525,10 @@ class App extends Component {
         let { id, authToken } = cookieControl.get("userdata");
         client.query({
             query: gql`
-                query($id: ID!, $authToken: String!, $conversationID: ID!) {
+                query($id: ID!, $authToken: String!, $conversationID: ID!, $limit: Int) {
                     conversation(id: $id, authToken: $authToken, conversationID: $conversationID) {
                         id,
-                        messages {
+                        messages(limit: $limit) {
                             id,
                             content,
                             time,
@@ -473,12 +543,18 @@ class App extends Component {
                 }
             `,
             variables: {
-                id, authToken, conversationID
+                id, authToken, conversationID,
+                limit: messagesLimiter
             }
         }).then(({ data: { conversation } }) => {
             if(!conversation) return this.props.failSession();
 
-            this.setState(() => ({ conversation }), () => {
+            this.setState(() => ({
+                conversation: {
+                    ...conversation,
+                    messages: conversation.messages.reverse()
+                }
+            }), () => {
                 this.viewMessages();
                 this.subscribeToMessages();
             });
@@ -548,6 +624,60 @@ class App extends Component {
         }).catch(this.props.failSession);
     }
 
+    fetchMoreMessages = () => {
+        if(this.state.isFetchingMessages || !this.state.messagesIsFetchable) return;
+        let QrP = fl => this.setState(() => ({ isFetchingMessages: fl }));
+
+        QrP(true);
+
+        let { id, authToken } = cookieControl.get("userdata");
+        let a = this.state.conversation,
+            b = a.messages,
+            c = a.id;
+
+        client.query({
+            query: gql`
+                query($id: ID!, $authToken: String!, $conversationID: ID!, $cursorID: ID, $limit: Int) {
+                    conversationMessages(id: $id, authToken: $authToken, conversationID: $conversationID, cursorID: $cursorID, limit: $limit) {
+                        id,
+                        content,
+                        time,
+                        type,
+                        isSeen,
+                        conversation {
+                            id
+                        },
+                        creator {
+                            id,
+                            avatar
+                        }
+                    }
+                }
+            `,
+            variables: {
+                id, authToken,
+                conversationID: c,
+                cursorID: b[0].id,
+                limit: messagesLimiter
+            }
+        }).then(({ data: { conversationMessages: pack } }) => {
+            QrP(false);
+            if(!pack) return this.props.failSession();
+            if(!this.state.conversation || c !== this.state.conversation.id) return;
+
+            this.setState(({ conversation, conversation: { messages } }) => ({
+                conversation: {
+                    ...conversation,
+                    messages: [
+                        ...pack.reverse(),
+                        ...messages
+                    ]
+                },
+                messagesIsFetchable: pack.length >= messagesLimiter // XIE
+            }));
+        }).catch(this.props.failSession);
+    }
+
     render() {
         return(
             <div className="rn rn-home">
@@ -556,6 +686,7 @@ class App extends Component {
                     conversation={ this.state.conversation }
                     onRequestConversation={ this.getConversation }
                     onSendChatMessage={ this.sendMessage }
+                    fetchMoreMessages={ this.fetchMoreMessages }
                 />
             </div>
         );

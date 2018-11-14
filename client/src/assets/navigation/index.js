@@ -25,7 +25,8 @@ class App extends Component {
                     user(id: $id, authToken: $authToken) {
                         id,
                         name,
-                        avatar
+                        avatar,
+                        status
                     }
                 }
             `,
@@ -44,6 +45,7 @@ class App extends Component {
             <div className="gl-nav">
                 <div className="gl-nav-ac">
                     <div className="gl-nav-ac-avatar">
+                        <div className={ 'gl-nav-ac-avatar-status ' + this.props.user.status } />
                         <img src={ (this.props.user.avatar) ? apiPath.storage + this.props.user.avatar : "" } alt="" />
                     </div>
                     <div className="gl-nav-ac-name">
