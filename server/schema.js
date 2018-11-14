@@ -8,7 +8,7 @@ const {
     GraphQLInt,
     GraphQLBoolean
 } = require('graphql');
-const { GraphQLUpload, PubSub } = require('apollo-server');
+const { GraphQLUpload, PubSub, withFilter } = require('apollo-server');
 
 const pubsub = new PubSub();
 
@@ -81,9 +81,9 @@ const ConversationType = new GraphQLObjectType({
         id: { type: GraphQLID },
         members: {
             type: new GraphQLList(UserType),
-            resolve: ({ members }) => User.find({
+            resolve: async ({ members }) => User.find({
                 _id: {
-                    $in: [members]
+                    $in: members
                 }
             })
         },
@@ -336,6 +336,13 @@ const RootMutation = new GraphQLObjectType({
                     time: new Date()
                 }).save()));
 
+                pubsub.publish('sendedChatMessage', {
+                    message,
+                    members: conversation.members,
+                    convID: conversation._id,
+                    creatorID: user._id
+                });
+
                 return message;
             }
         },
@@ -366,7 +373,46 @@ const RootMutation = new GraphQLObjectType({
     }
 });
 
+const RootSubscription = new GraphQLObjectType({
+    name: "RootSubscription",
+    fields: {
+        newChatMessage: {
+            type:  MessageType,
+            args: {
+                id: { type: new GraphQLNonNull(GraphQLID) },
+                authToken: { type: new GraphQLNonNull(GraphQLString) },
+                conversationID: { type: new GraphQLNonNull(GraphQLID) }
+            },
+            subscribe: withFilter(
+                () => pubsub.asyncIterator('sendedChatMessage'),
+                async ({ message, members, convID, creatorID }, { id, authToken, conversationID }) => {
+                    return (
+                        str(conversationID) !== str(convID) ||
+                        str(creatorID) === str(id) ||
+                        !(await validateAccount(id, authToken)) ||
+                        !members.includes(str(id))
+                    ) ? false:true;
+                }
+            ),
+            resolve: ({ message }) => message
+        },
+        chatUnseenCounterUpdated:  { // can fire on increase, but it's a better way
+            type: ConversationType,
+            args: {
+                id: { type: new GraphQLNonNull(GraphQLID) },
+                authToken: { type: new GraphQLNonNull(GraphQLString) }
+            },
+            subscribe: withFilter(
+                () => pubsub.asyncIterator('updatedConversationUnseenCounter'),
+                async () => null
+            ),
+            resolve: ({ conversation }) => conversation
+        }
+    }
+})
+
 module.exports = new GraphQLSchema({
     query: RootQuery,
-    mutation: RootMutation
+    mutation: RootMutation,
+    subscription: RootSubscription
 });

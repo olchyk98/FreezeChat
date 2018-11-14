@@ -342,6 +342,10 @@ class App extends Component {
     }
 
     componentDidMount() {
+        this.fetchPrimary();
+    }
+
+    fetchPrimary = () => {
         this.props.updateSession({ conversations: false });
 
         let { id, authToken } = cookieControl.get("userdata");
@@ -372,6 +376,49 @@ class App extends Component {
         }).catch(this.props.failSession);
     }
 
+    subscribeToMessages = () => {
+        if(!this.state.conversation || !this.state.conversation.id) return;
+        let a = this.state.conversation.id;
+
+        let { id, authToken } = cookieControl.get("userdata");
+       this.conversationSubscriptionPromise = client.subscribe({
+            query: gql`
+                subscription($id: ID!, $authToken: String!, $conversationID: ID!) {
+                    newChatMessage(id: $id, authToken: $authToken, conversationID: $conversationID) {
+                        id,
+                        content,
+                        time,
+                        type,
+                        isSeen,
+                        conversation {
+                            id
+                        },
+                        creator {
+                            id,
+                            avatar
+                        }
+                    }
+                }
+            `,
+            variables: {
+                id, authToken,
+                conversationID: a.id
+            }
+        }).subscribe({next: ({ data: { newChatMessage: message } }) => {
+            if(!message || !this.state.conversation || this.state.conversation.id !== a.id) this.failSession();
+
+            this.setState(({ conversation, conversation: { messages } }) => ({
+                conversation: {
+                    ...conversation,
+                    messages: [
+                        ...messages,
+                        message
+                    ]
+                }
+            }));
+        }});
+    }
+
     viewMessages = () => {
         let a = this.state.conversation;
         if(!a) return;
@@ -389,6 +436,12 @@ class App extends Component {
             }
         }).then(({ data: { viewMessages: data } }) => {
             if(!data) return this.failSession();
+            this.setState(({ conversation }) => ({
+                conversation: {
+                    ...conversation,
+                    unSeenMessages: 0
+                }
+            }))
         }).catch(this.failSession);
     }
 
@@ -425,7 +478,10 @@ class App extends Component {
         }).then(({ data: { conversation } }) => {
             if(!conversation) return this.props.failSession();
 
-            this.setState(() => ({ conversation }), this.viewMessages);
+            this.setState(() => ({ conversation }), () => {
+                this.viewMessages();
+                this.subscribeToMessages();
+            });
         }).catch(this.props.failSession)
     }
 
