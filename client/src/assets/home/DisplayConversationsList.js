@@ -6,7 +6,7 @@ import DisplayConversationsListConversation from './DisplayConversationsListConv
 
 class DisplayConversationsList extends Component {
     render() {
-        if(this.props.conversations === false) return( // loading
+        if(this.props.conversations === false || this.props.findedConversations === false) return( // loading
             <div className="rn-home-display-conversations-list">
                 <div className="rn-home-display-conversations-list-loader" />
             </div>
@@ -15,18 +15,22 @@ class DisplayConversationsList extends Component {
         return(
             <div className="rn-home-display-conversations-list">
                 {
-                    (this.props.conversations) ? (
-                        this.props.conversations.map(({ id, previewTitle, previewImage, previewContent, unSeenMessages, previewTime }) => (
-                            <DisplayConversationsListConversation
-                                key={ id }
-                                name={ previewTitle }
-                                image={ previewImage }
-                                time={ previewTime }
-                                unSeenMessages={ unSeenMessages }
-                                content={ previewContent }
-                                onRequest={ () => this.props.onRequestConversation(id) }
-                            />
-                        ))
+                    (this.props.findedConversations || this.props.conversations) ? (
+                        ( (this.props.findedConversations) ? this.props.findedConversations.length : (this.props.conversations) ? this.props.conversations.length : null ) ? (
+                            (this.props.findedConversations || this.props.conversations).map(({ id, previewTitle, previewImage, previewContent, unSeenMessages, previewTime }) => (
+                                <DisplayConversationsListConversation
+                                    key={ id }
+                                    name={ previewTitle }
+                                    image={ previewImage }
+                                    time={ previewTime }
+                                    unSeenMessages={ unSeenMessages }
+                                    content={ previewContent }
+                                    onRequest={ () => this.props.onRequestConversation(id) }
+                                />
+                            ))
+                        ) : (
+                            <p className="rn-home-display-conversations-list-alertion">Nothing here :(</p>
+                        )
                     ) : null
                 }
             </div>

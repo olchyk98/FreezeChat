@@ -79,6 +79,7 @@ const ConversationType = new GraphQLObjectType({
     name: "Conversation",
     fields: () => ({
         id: { type: GraphQLID },
+        title: { type: GraphQLString },
         members: {
             type: new GraphQLList(UserType),
             resolve: async ({ members }) => User.find({
@@ -248,7 +249,28 @@ const RootQuery = new GraphQLObjectType({
                     }
                 }
             }
-        }
+        },
+        searchConversations: {
+            type: new GraphQLList(ConversationType),
+            args: {
+                id: { type: new GraphQLNonNull(GraphQLID) },
+                authToken: { type: new GraphQLNonNull(GraphQLString) },
+                query: { type: new GraphQLNonNull(GraphQLString) }
+            },
+            async resolve(_, { id, authToken, query }) {
+                let user = await validateAccount(id, authToken);
+                if(!user) return null;
+
+                let reg = a => new RegExp(a, "i");
+
+                return Conversation.find({
+                    members: {
+                        $in: [str(user._id)]
+                    },
+                    title: reg(query)
+                });
+            }
+        },
     }
 });
 
@@ -346,16 +368,20 @@ const RootMutation = new GraphQLObjectType({
                 let user = await validateAccount(id, authToken);
                 if(!user) return null;
 
+                let victim = await User.findById(victimID);
+                if(!victim) return null;
+
                 let conversation = await Conversation.findOne({
                     $or: [
-                        { members: [str(user._id), str(victimID)] },
-                        { members: [str(victimID), str(user._id)] }
+                        { members: [str(user._id), str(victim._id)] },
+                        { members: [str(victim._id), str(user._id)] }
                     ]
                 });
 
                 if(!conversation) {
                     let nConv = (await (new Conversation({
-                        members: [str(user._id), str(victimID)]
+                        members: [str(user._id), str(victim._id)],
+                        title: `${ user.name } and ${ victim.name }`
                     })).save());
 
                     return nConv;

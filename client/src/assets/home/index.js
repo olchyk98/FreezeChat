@@ -85,6 +85,23 @@ let stickers = {},
 }
 
 class DisplayConversationsSearch extends Component {
+    constructor(props) {
+        super(props);
+
+        this.state = {
+            value: ""
+        }
+
+        this.pushInt = null;
+    }
+
+    pushQuery = value => {
+        clearTimeout(this.pushInt);
+        this.setState({ value }, () => {
+            this.pushInt = setTimeout(() => this.props._onSubmit(this.state.value), 300);
+        });
+    }
+
     render() {
         return(
             <div className="rn-home-display-conversations-search">
@@ -95,6 +112,9 @@ class DisplayConversationsSearch extends Component {
                     type="text"
                     className="rn-home-display-conversations-search-input definp"
                     placeholder="Search"
+                    onChange={
+                        ({ target: { value } }) => this.pushQuery(value)
+                    }
                 />
             </div>
         );
@@ -105,9 +125,12 @@ class DisplayConversations extends Component {
     render() {
         return(
             <div className="rn-home-display-conversations">
-                <DisplayConversationsSearch />
+                <DisplayConversationsSearch
+                    _onSubmit={ this.props.onSearchConversations }
+                />
                 <DisplayConversationsList
                     onRequestConversation={ this.props.onRequestConversation }
+                    findedConversations={ this.props.findedConversations }
                 />
             </div>
         );
@@ -369,6 +392,8 @@ class Display extends Component {
             <div className="rn-home-display">
                 <DisplayConversations
                     onRequestConversation={ this.props.onRequestConversation }
+                    onSearchConversations={ this.props.onSearchConversations }
+                    findedConversations={ this.props.findedConversations }
                 />
                 <DisplayChat
                     isLoading={ this.props.conversation === false }
@@ -388,11 +413,13 @@ class App extends Component {
 
         this.state = {
             conversation: null,
+            findedConversations: null,
             isFetchingMessages: false,
             messagesIsFetchable: true
         }
 
         this.messagesSubscription = null;
+        this.currSearchQuery = "";
     }
 
     componentDidMount() {
@@ -707,15 +734,58 @@ class App extends Component {
         }).catch(this.props.failSession);
     }
 
+    searchConversations = async value => {
+        await client.clearStore();
+    
+        let qRa = pl => this.setState(() => ({ findedConversations: pl }));
+
+        if(!value.replace(/ /g, "").length) {
+            if(!this.state.conversation) this.fetchPrimary();
+            return qRa(null);
+        }
+        
+        this.currSearchQuery = value;
+        let a = this.currSearchQuery;
+        
+        qRa(false);
+
+        let { id, authToken } = cookieControl.get("userdata");
+        client.query({
+            query: gql`
+                query($id: ID!, $authToken: String!, $query: String!) {
+                    searchConversations(id: $id, authToken: $authToken, query: $query) {
+                        id,
+                        previewTitle(id: $id),
+                        previewImage(id: $id),
+                        previewContent,
+                        previewTime,
+                        unSeenMessages(id: $id)
+                    }
+                }
+            `,
+            variables: {
+                id, authToken,
+                query: value
+            }
+        }).then(({ data: { searchConversations: cnv } }) => {
+            if(!cnv) return this.failSession();
+            if(this.currSearchQuery !== a) return;
+
+            qRa(cnv);
+        }).catch(() => this.failSession());
+    }
+
     render() {
         return(
             <div className="rn rn-home">
                 <Navigation />
                 <Display
                     conversation={ this.state.conversation }
+                    findedConversations={ this.state.findedConversations }
                     onRequestConversation={ this.getConversation }
                     onSendChatMessage={ this.sendMessage }
                     fetchMoreMessages={ this.fetchMoreMessages }
+                    onSearchConversations={ this.searchConversations }
                 />
             </div>
         );
