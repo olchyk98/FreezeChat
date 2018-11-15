@@ -130,6 +130,7 @@
     position:relative;
     padding-top:var(--padding);
     padding-bottom:var(--padding);
+    text-decoration:none;
 }
 
 .gl-nav-mat-btn:before {

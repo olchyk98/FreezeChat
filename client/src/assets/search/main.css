@@ -1,0 +1,21 @@
+.rn-search {
+    --padding:20px;
+
+    padding-top:var(--padding);
+    padding-bottom:var(--padding);
+    height:calc(100vh - var(--padding) * 2);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+}
+
+.rn-search > * {
+    flex-shrink:0;
+}
+
+.rn-search-mat {
+    height:90px;
+    width:400px;
+    background:red;
+    max-width:90%;
+}

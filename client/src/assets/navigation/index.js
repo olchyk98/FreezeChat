@@ -3,18 +3,24 @@ import './main.css';
 
 import { connect } from 'react-redux';
 import { gql } from 'apollo-boost';
+import { Link } from 'react-router-dom';
 
 import links from '../../links';
 import client from '../../apollo';
 import { cookieControl } from '../../glTools';
 import apiPath from '../../api';
 
-const Button = ({ icon, title }) => (
-    <button className="gl-nav-mat-btn definp">
+const Button = ({ icon, title, active, url, action }) => (url) ? (
+    <Link to={ url } className={ `gl-nav-mat-btn definp${ (!active) ? "" : " active" }` }>
+        { icon }
+        <span>{ title }</span>
+    </Link>
+) : (action) ? (
+    <button className="gl-nav-mat-btn definp" onClick={ action }>
         { icon }
         <span>{ title }</span>
     </button>
-)
+) : null
 
 class App extends Component {
     componentDidMount() {
@@ -40,9 +46,18 @@ class App extends Component {
         }).catch(this.props.failSession);
     }
 
+    logout = () => {
+        cookieControl.delete("userdata");
+        window.location.href = links["REGISTER_PAGE"].absolute;
+    }
+
+    handleClick = () => { // XXX
+        this.forceUpdate();
+    }
+
     render() {
         return(
-            <div className="gl-nav">
+            <div className="gl-nav" onClick={ this.handleClick }>
                 <div className="gl-nav-ac">
                     <div className="gl-nav-ac-avatar">
                         <div className={ 'gl-nav-ac-avatar-status ' + ((this.props.user.status && this.props.user.status.toLowerCase()) || "") } />
@@ -72,14 +87,17 @@ class App extends Component {
                             },
                             {
                                 icon: <i className="fas fa-door-closed" />,
-                                title: "Logout"
+                                title: "Logout",
+                                action: this.logout
                             }
-                        ].map(({ icon, title, url }, index) => (
+                        ].map(({ icon, title, url, action }, index) => (
                             <Button
                                 key={ index }
                                 icon={ icon }
                                 title={ title }
-                                active={ window.location.pathname.split("/")[1] === url }
+                                url={ url }
+                                action={ action }
+                                active={ "/"+window.location.pathname.split("/")[1] === url }
                             />
                         ))
                     }

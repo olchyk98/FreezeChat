@@ -8,6 +8,7 @@ import * as serviceWorker from './serviceWorker';
 import Nav from './assets/navigation';
 import Home from './assets/home';
 import Register from './assets/register';
+import Search from "./assets/search";
 
 // Redux
 import { Provider } from 'react-redux';
@@ -52,6 +53,13 @@ ReactDOM.render(
                         path={ links["HOME_PAGE"].route }
                         condition={ cookieControl.get("userdata") }
                         component={ Home }
+                        redirect={ links["REGISTER_PAGE"].route }
+                        exact
+                    />
+                    <NeedleRoute
+                        path={ links["SEARCH_PAGE"].route }
+                        condition={ cookieControl.get("userdata") }
+                        component={ Search }
                         redirect={ links["REGISTER_PAGE"].route }
                         exact
                     />
