@@ -180,24 +180,22 @@ class DisplayChatDisplay extends Component {
     }
 
     componentDidUpdate(nProps) {
-        if(this.state.fetchingMore) {
+        if(this.state.fetchingMore) { // fetched
             this.matDisplayRef.scrollTo({
-                top: this.matDisplayRef - this.state.fetchingMore,
-                behavior: "smooth"
+                top: this.matDisplayRef.scrollHeight - this.state.fetchingMore
             });
-
-            this.setState(() => ({ fetchingMore: false }));
         } else if( // added
             nProps.messages &&
             this.props.messages &&
-            nProps.messages.length === this.props.messages.length + 1
-        ) {
-            this.scrollToBottom();
+            nProps.messages.length < this.props.messages.length
+        ) { // best way
+            if(!this.state.fetchingMore) this.scrollToBottom();
+            else this.setState(() => ({ fetchingMore: false }));
         }
     }
 
     scrollToBottom = () => {
-        this.anchorRef.scrollIntoView({ behavior: "smooth" });
+        this.anchorRef.scrollIntoView();
     }
 
     fetchMoreMessages = () => {
