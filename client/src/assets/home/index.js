@@ -12,7 +12,7 @@ import { convertTime } from '../../glTools';
 import Navigation from './Navigation';
 import DisplayConversationsList from './DisplayConversationsList';
 
-const messagesLimiter = 20; 
+const messagesLimiter = 20;
 
 let stickers = {},
     actions = {};
@@ -114,17 +114,31 @@ class DisplayConversations extends Component {
     }
 }
 
-const DisplayChatDisplayMessage = ({ clients, content, type, creator: { avatar }, time }) => {
-    function getContent() {
+class DisplayChatDisplayMessage extends Component {
+    constructor(props) {
+        super(props);
+
+        this.updateInt = null;
+    }
+
+    componentDidMount() {
+        setInterval(() => (this.updateInt) ? this.forceUpdate() : null, 5000);
+    }
+
+    componentWillUnmount() {
+        clearInterval(this.updateInt);
+    }
+
+    getContent = () => {
         let a = null;
 
-        switch(type) {
+        switch(this.props.type) {
             default:
             case 'TEXT_TYPE':
                 a = (
                     <div className="rn-home-display-chat-display-message-content-mat">
                         <span className="rn-home-display-chat-display-message-content-mat-text">
-                            { content }
+                            { this.props.content }
                         </span>
                     </div>
                 );
@@ -132,15 +146,15 @@ const DisplayChatDisplayMessage = ({ clients, content, type, creator: { avatar }
             case 'STICKER_TYPE':
                 a = (
                     <div className="rn-home-display-chat-display-message-content-mat nobg">
-                        <img src={ stickers[content] } alt="sticker" />
+                        <img src={ stickers[this.props.content] } alt="sticker" />
                     </div>
                 );
             break;
             case 'ACTION_TYPE':
                 a = (
                     <div className="rn-home-display-chat-display-message-content-mat nobg action">
-                        <img src={ actions[content].url } alt="action sticker" />
-                        <p>{ actions[content].description }</p>
+                        <img src={ actions[this.props.content].url } alt="action sticker" />
+                        <p>{ actions[this.props.content].description }</p>
                     </div>
                 )
             break;
@@ -149,19 +163,21 @@ const DisplayChatDisplayMessage = ({ clients, content, type, creator: { avatar }
         return a;
     }
 
-    return(
-        <div className={ `rn-home-display-chat-display-message${ (!clients) ? "" : " right" }` }>
-            <div className="rn-home-display-chat-display-message-content">
-                <div className="rn-home-display-chat-display-message-content-avatar">
-                    <img src={ (avatar) ? apiPath.storage + avatar : "" } alt="user's avatar" />
+    render() {
+        return(
+            <div className={ `rn-home-display-chat-display-message${ (!this.props.clients) ? "" : " right" }` }>
+                <div className="rn-home-display-chat-display-message-content">
+                    <div className="rn-home-display-chat-display-message-content-avatar">
+                        <img src={ (this.props.creator.avatar) ? apiPath.storage + this.props.creator.avatar : "" } alt="user's avatar" />
+                    </div>
+                    { this.getContent() }
                 </div>
-                { getContent() }
+                <div className="rn-home-display-chat-display-message-time">
+                    <span>{ convertTime(this.props.time) }</span>
+                </div>
             </div>
-            <div className="rn-home-display-chat-display-message-time">
-                <span>{ convertTime(time) }</span>
-            </div>
-        </div>
-    );
+        );
+    }
 }
 
 class DisplayChatDisplay extends Component {
@@ -169,17 +185,21 @@ class DisplayChatDisplay extends Component {
         super(props);
 
         this.state = {
-            fetchingMore: false
+            fetchingMore: false,
+            isFullMounted: false
         }
 
         this.anchorRef = this.matDisplayRef = React.createRef();
     }
 
-    componentDidMount() {
-        this.scrollToBottom();
-    }
-
     componentDidUpdate(nProps) {
+        if(!this.state.isFullMounted && this.props.messages) { // first rec
+            this.scrollToBottom();
+            this.setState(() => ({
+                isFullMounted: true
+            }));
+        }
+
         if(this.state.fetchingMore) { // fetched
             this.matDisplayRef.scrollTo({
                 top: this.matDisplayRef.scrollHeight - this.state.fetchingMore
@@ -195,7 +215,11 @@ class DisplayChatDisplay extends Component {
     }
 
     scrollToBottom = () => {
-        this.anchorRef.scrollIntoView();
+        let a = () => this.anchorRef.scrollIntoView(); // NOTE: Shortcut is forbidden
+
+        a();
+        let { scrollHeight, scrollTop } = this.matDisplayRef;
+        if(scrollHeight !== scrollTop) a();
     }
 
     fetchMoreMessages = () => {
@@ -323,7 +347,7 @@ class DisplayChat extends Component {
                 <div className="rn-home-display-chat-name">
                     {
                         (this.props.isVoid) ? null : (
-                            <h2 className="rn-home-display-chat-name-mat">Oles Odynets</h2>
+                            <h2 className="rn-home-display-chat-name-mat">{ this.props.conversation.previewTitle }</h2>
                         )
                     }
                 </div>
@@ -367,6 +391,8 @@ class App extends Component {
             isFetchingMessages: false,
             messagesIsFetchable: true
         }
+
+        this.messagesSubscription = null;
     }
 
     componentDidMount() {
@@ -410,7 +436,7 @@ class App extends Component {
         let a = this.state.conversation;
 
         let { id, authToken } = cookieControl.get("userdata");
-       this.conversationSubscriptionPromise = client.subscribe({
+       this.messagesSubscription = this.conversationSubscriptionPromise = client.subscribe({
             query: gql`
                 subscription($id: ID!, $authToken: String!, $conversationID: ID!) {
                     newChatMessage(id: $id, authToken: $authToken, conversationID: $conversationID) {
@@ -434,7 +460,7 @@ class App extends Component {
                 conversationID: a.id
             }
         }).subscribe({next: ({ data: { newChatMessage: message } }) => {
-            if(!message || !this.state.conversation || this.state.conversation.id !== a.id) this.failSession();
+            if(!message || !this.state.conversation || this.state.conversation.id !== a.id) return;
 
             this.setState(({ conversation, conversation: { messages } }) => ({
                 conversation: {
@@ -444,7 +470,7 @@ class App extends Component {
                         message
                     ]
                 }
-            }));
+            }), this.viewMessages);
         }});
     }
 
@@ -473,6 +499,9 @@ class App extends Component {
                 b = a.findIndex( ({ id }) => id === conversation.id );
             if(b === -1) return;
 
+            if(this.state.conversation && this.state.conversation.id === conversation.id) conversation.unSeenMessages = 0;
+            else client.clearStore();
+
             a[b] = conversation;
             this.props.updateSession({ conversations: a });
         }});
@@ -482,18 +511,14 @@ class App extends Component {
         let a = this.state.conversation;
         if(!a) return;
 
-        this.setState(() => ({
-            messagesIsFetchable: true
-        }));
-
         {
             let b = Array.from(this.props.user.conversations);
             if(b) {
-                let c = b[b.findIndex( ({ id }) => a.id )];
-                if(c === -1) return;
-
-                c.unSeenMessages = 0;
-                this.props.updateSession({ conversations: b });
+                let c = b[b.findIndex( ({ id }) => id === a.id )];
+                if(c && c.unSeenMessages !== 0) {
+                    c.unSeenMessages = 0;
+                    this.props.updateSession({ conversations: b });
+                }
             }
         }
 
@@ -517,7 +542,8 @@ class App extends Component {
         if(this.state.conversation && conversationID === this.state.conversation.id) return;
 
         this.setState(() => ({
-            conversation: false
+            conversation: false,
+            messagesIsFetchable: true
         }));
 
         let { id, authToken } = cookieControl.get("userdata");
@@ -526,6 +552,7 @@ class App extends Component {
                 query($id: ID!, $authToken: String!, $conversationID: ID!, $limit: Int) {
                     conversation(id: $id, authToken: $authToken, conversationID: $conversationID) {
                         id,
+                        previewTitle(id: $id),
                         messages(limit: $limit) {
                             id,
                             content,
@@ -553,6 +580,10 @@ class App extends Component {
                     messages: conversation.messages.reverse()
                 }
             }), () => {
+                if(this.messagesSubscription) { 
+                    this.messagesSubscription.unsubscribe();
+                    this.messagesSubscription = null;
+                }
                 this.viewMessages();
                 this.subscribeToMessages();
             });

@@ -27,16 +27,21 @@
     margin-bottom:var(--margin);
 }
 
+.gl-nav-ac-avatar,
+.gl-nav-ac-avatar > img,
+.gl-nav-ac-avatar-status {
+    border-radius:50%;
+}
+
+
 .gl-nav-ac-avatar {
     --size:55px;
 
     height:var(--size);
     width:var(--size);
-    border-radius:50%;
     border:3px solid white;
     box-shadow:0px 0px 25px -5px rgba(0, 0, 0, .3);
     position:relative;
-    overflow:hidden;
 }
 
 .gl-nav-ac-avatar > img {
@@ -44,6 +49,49 @@
     width:100%;
     object-fit:cover;
     object-position:center;
+}
+
+.gl-nav-ac-avatar-status {
+    --size:10px;
+
+    position:absolute;
+    top:0;
+    right:0;
+    opacity:.4;
+    width:var(--size);
+    height:var(--size);
+    background:transparent;
+    z-index:5;
+    animation:gl-nav-ac-avatar-status-cont-am 5s linear infinite alternate;
+    transition:all .4s;
+}
+
+.gl-nav-ac-avatar-status.free {
+    background:lime;
+}
+
+.gl-nav-ac-avatar-status.busy {
+    background:red;
+}
+
+.gl-nav-ac-avatar-status.working {
+    background:orange;
+}
+
+.gl-nav-ac-avatar-status.sale {
+    background:yellow;
+}
+
+@keyframes gl-nav-ac-avatar-status-cont-am {
+    0% {
+        transform:translateY(0);
+    }
+    50% {
+        transform:translateY(2px);
+    }
+    100% {
+        transform:translateY(-2px);
+    }
 }
 
 .gl-nav-ac-name {

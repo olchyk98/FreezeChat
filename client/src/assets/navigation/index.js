@@ -45,7 +45,7 @@ class App extends Component {
             <div className="gl-nav">
                 <div className="gl-nav-ac">
                     <div className="gl-nav-ac-avatar">
-                        <div className={ 'gl-nav-ac-avatar-status ' + this.props.user.status } />
+                        <div className={ 'gl-nav-ac-avatar-status ' + ((this.props.user.status && this.props.user.status.toLowerCase()) || "") } />
                         <img src={ (this.props.user.avatar) ? apiPath.storage + this.props.user.avatar : "" } alt="" />
                     </div>
                     <div className="gl-nav-ac-name">
