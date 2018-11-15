@@ -242,6 +242,10 @@
     position:relative;
 }
 
+.rn-home-display-conversations-list-conv.active {
+    background:rgba(255, 255, 255, .75);
+}
+
 .rn-home-display-conversations-list-conv > *:not(.rn-home-display-conversations-list-conv-selector) {
     position:relative;
     z-index:3;

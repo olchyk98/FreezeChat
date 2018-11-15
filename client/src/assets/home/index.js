@@ -131,6 +131,7 @@ class DisplayConversations extends Component {
                 <DisplayConversationsList
                     onRequestConversation={ this.props.onRequestConversation }
                     findedConversations={ this.props.findedConversations }
+                    activeConversation={ this.props.activeConversation }
                 />
             </div>
         );
@@ -394,6 +395,7 @@ class Display extends Component {
                     onRequestConversation={ this.props.onRequestConversation }
                     onSearchConversations={ this.props.onSearchConversations }
                     findedConversations={ this.props.findedConversations }
+                    activeConversation={ (this.props.conversation && this.props.conversation.id) || null }
                 />
                 <DisplayChat
                     isLoading={ this.props.conversation === false }
@@ -617,8 +619,10 @@ class App extends Component {
         }).catch(this.props.failSession)
     }
 
-    sendMessage = (type, content) => {
+    sendMessage = async (type, content) => {
         if(!this.state.conversation) return;
+
+        await client.clearStore();
 
         let a = cookieControl.get("userdata"),
             b = Array.from(this.state.conversation.messages),

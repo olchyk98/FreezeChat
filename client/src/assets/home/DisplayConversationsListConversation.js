@@ -10,7 +10,7 @@ class DisplayConversationsListConversation extends Component {
     
     render() {
         return(
-            <div className="rn-home-display-conversations-list-conv">
+            <div className={ `rn-home-display-conversations-list-conv${ (!this.props.active) ? "" : " active" }` }>
                 <div className="rn-home-display-conversations-list-conv-selector"
                     onClick={ this.props.onRequest }
                 />

@@ -26,6 +26,7 @@ class DisplayConversationsList extends Component {
                                     unSeenMessages={ unSeenMessages }
                                     content={ previewContent }
                                     onRequest={ () => this.props.onRequestConversation(id) }
+                                    active={ this.props.activeConversation === id }
                                 />
                             ))
                         ) : (
