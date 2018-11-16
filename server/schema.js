@@ -112,16 +112,20 @@ const ConversationType = new GraphQLObjectType({
             },
             resolve: async ({ members }, { id }) => (await User.findById(
                 str(members.find( io => str(io) !== str(id) ))
-            )).name
+            )).name || ""
         },
         previewImage: {
             type: GraphQLString,
             args: {
                 id: { type: new GraphQLNonNull(GraphQLID) }
             },
-            resolve: async ({ members }, { id }) => (await User.findById(
-                str(members.find( io => str(io) !== str(id) ))
-            )).avatar
+            resolve: async ({ members }, { id }) => {
+                let a = await User.findById(
+                    members.find( io => str(io) === str(id) )
+                );
+                if(a) return a.avatar;
+                else return "";
+            }
         },
         previewContent: {
             type: GraphQLString,
@@ -188,7 +192,7 @@ const RootQuery = new GraphQLObjectType({
                 authToken: { type: new GraphQLNonNull(GraphQLString) }
             },
             resolve(_, { id, authToken }) {
-                return  validateAccount(id, authToken);
+                return validateAccount(id, authToken);
             }
         },
         conversation: {
@@ -271,6 +275,27 @@ const RootQuery = new GraphQLObjectType({
                 });
             }
         },
+        searchUsers: {
+            type: new GraphQLList(UserType),
+            args: {
+                id: { type: new GraphQLNonNull(GraphQLID) },
+                authToken: { type: new GraphQLNonNull(GraphQLString) },
+                query: { type: new GraphQLNonNull(GraphQLString) }  
+            },
+            async resolve(_, { id, authToken, query }) {
+                // Validate account
+                let user = await validateAccount(id, authToken);
+                if(!user) return null;
+
+                // Submit
+                return User.find({
+                    _id: {
+                        $ne: str(user._id)
+                    },
+                    name: new RegExp(query, "i")
+                }).sort({ registeredTime: -1 });
+            }
+        }
     }
 });
 
@@ -362,31 +387,46 @@ const RootMutation = new GraphQLObjectType({
             args: {
                 id: { type: new GraphQLNonNull(GraphQLID) },
                 authToken: { type: new GraphQLNonNull(GraphQLString) },
-                victimID: { type: new GraphQLNonNull(GraphQLID) }
+                trackID: { type: new GraphQLNonNull(GraphQLID) }
             },
-            async resolve(_, { id, authToken, victimID }) {
+            async resolve(_, { id, authToken, trackID }) {
+                if(str(trackID) === str(id)) return null;
+
                 let user = await validateAccount(id, authToken);
                 if(!user) return null;
 
-                let victim = await User.findById(victimID);
-                if(!victim) return null;
+                let victim = null;
+                try {
+                    victim = await User.findById(trackID);
+                } catch(_) {
+                    victim = null;
+                }
 
-                let conversation = await Conversation.findOne({
-                    $or: [
-                        { members: [str(user._id), str(victim._id)] },
-                        { members: [str(victim._id), str(user._id)] }
-                    ]
-                });
+                if(victim) { // trackID is a person
+                    let conversation = await Conversation.findOne({
+                        $or: [
+                            { members: [str(user._id), str(victim._id)] },
+                            { members: [str(victim._id), str(user._id)] }
+                        ]
+                    });
 
-                if(!conversation) {
-                    let nConv = (await (new Conversation({
-                        members: [str(user._id), str(victim._id)],
-                        title: `${ user.name } and ${ victim.name }`
-                    })).save());
-
-                    return nConv;
-                } else { // exists
-                    return conversation;
+                    if(!conversation) {
+                        let nConv = (await (new Conversation({
+                            members: [str(user._id), str(victim._id)],
+                            title: `${ user.name } and ${ victim.name }`
+                        })).save());
+    
+                        return nConv;
+                    } else { // exists
+                        return conversation;
+                    }
+                } else { // trackID is a conversation
+                    return Conversation.findOne({
+                        _id: trackID,
+                        members: {
+                            $in: [str(user._id)]
+                        }
+                    });
                 }
             }
         },

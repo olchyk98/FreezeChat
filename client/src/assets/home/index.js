@@ -8,6 +8,7 @@ import { cookieControl } from '../../glTools';
 import client from '../../apollo';
 import apiPath from '../../api';
 import { convertTime } from '../../glTools';
+import links from '../../links';
 
 import Navigation from './Navigation';
 import DisplayConversationsList from './DisplayConversationsList';
@@ -579,11 +580,11 @@ class App extends Component {
             }
         }).then(({ data: { viewMessages: data } }) => {
             if(!this._isMounted) return;
-            if(!data) return this.failSession();
-        }).catch(this.failSession);
+            if(!data) this.props.failSession();
+        }).catch(this.props.failSession);
     }
 
-    pickConversation = victimID => {
+    pickConversation = trackID => {
         this.setState(() => ({
             conversation: false,
             messagesIsFetchable: true
@@ -596,8 +597,8 @@ class App extends Component {
         */
         client.mutate({
             mutation: gql`
-                mutation($id: ID!, $authToken: String!, $victimID: ID!, $limit: Int) {
-                    createConversation(id: $id, authToken: $authToken, victimID: $victimID) {
+                mutation($id: ID!, $authToken: String!, $trackID: ID!, $limit: Int) {
+                    createConversation(id: $id, authToken: $authToken, trackID: $trackID) {
                         id,
                         previewTitle(id: $id),
                         messages(limit: $limit) {
@@ -615,12 +616,17 @@ class App extends Component {
                 }
             `,
             variables: {
-                id, authToken, victimID,
+                id, authToken, trackID,
                 limit: messagesLimit
             }
         }).then(({ data: { createConversation: conversation } }) => {
             if(!this._isMounted) return;
-            if(!conversation) return this.props.failSession();
+            if(!conversation) {
+                this.setState(() => ({
+                    conversation: null
+                }));
+                return window.history.pushState(null, null, links["HOME_PAGE"].absolute);
+            }
 
             this.setState(() => ({
                 conversation: {
@@ -635,7 +641,7 @@ class App extends Component {
                 this.viewMessages();
                 this.subscribeToMessages();
             });
-        }).catch(this.props.failSession);
+        }).catch(console.log); // this.props.failSession
     }
 
     getConversation = conversationID => {
@@ -681,12 +687,15 @@ class App extends Component {
                     messages: conversation.messages.reverse()
                 }
             }), () => {
-                if(this.messagesSubscription) { 
+                if(this.messagesSubscription) { // Unsubscribe from previous conversation
                     this.messagesSubscription.unsubscribe();
                     this.messagesSubscription = null;
                 }
+
+                window.history.pushState(null, null, `${ links["HOME_PAGE"].absolute }/${ conversationID }`)
+
                 this.viewMessages();
-                this.subscribeToMessages();
+                this.subscribeToMessages(); // Subscribe to THE conversation
             });
         }).catch(this.props.failSession)
     }
@@ -845,11 +854,11 @@ class App extends Component {
                 query: value
             }
         }).then(({ data: { searchConversations: cnv } }) => {
-            if(!cnv) return this.failSession();
+            if(!cnv) return this.props.failSession();
             if(!this._isMounted || this.currSearchQuery !== a) return;
 
             qRa(cnv);
-        }).catch(() => this.failSession());
+        }).catch(() => this.props.failSession());
     }
 
     render() {

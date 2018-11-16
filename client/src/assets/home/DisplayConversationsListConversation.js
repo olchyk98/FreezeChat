@@ -4,8 +4,22 @@ import apiPath from '../../api';
 import { convertTime } from '../../glTools';
 
 class DisplayConversationsListConversation extends Component {
+    constructor(props) {
+        super(props);
+
+        this._isMount = this.updateInt = null;
+    }
+    
+    componentDidMount() {
+        this._isMount = true;
+    }
+
+    componentWillUnmount() {
+        this._isMount = false;
+    }
+
     componentDidUpdate() {
-        setInterval(() => this.forceUpdate(), 5000); // NOTE: You should use arrow function!
+        this.updateInt = setInterval(() => (this._isMount) ? this.forceUpdate() : null, 5000); // NOTE: You should use arrow function!
     }
     
     render() {

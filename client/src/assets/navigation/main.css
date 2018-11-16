@@ -66,22 +66,6 @@
     transition:all .4s;
 }
 
-.gl-nav-ac-avatar-status.free {
-    background:lime;
-}
-
-.gl-nav-ac-avatar-status.busy {
-    background:red;
-}
-
-.gl-nav-ac-avatar-status.working {
-    background:orange;
-}
-
-.gl-nav-ac-avatar-status.sale {
-    background:yellow;
-}
-
 @keyframes gl-nav-ac-avatar-status-cont-am {
     0% {
         transform:translateY(0);

@@ -45,3 +45,19 @@ html, body {
   background:red;
   background:#F3F3FC;
 }
+
+.glc-userstatus.free {
+  background:lime;
+}
+
+.glc-userstatus.busy {
+  background:red;
+}
+
+.glc-userstatus.working {
+  background:orange;
+}
+
+.glc-userstatus.sale {
+  background:yellow;
+}

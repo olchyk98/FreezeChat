@@ -71,6 +71,7 @@ ReactDOM.render(
                         exact
                     />
                     <Redirect from="/" exact to={ links["HOME_PAGE"].route } />
+                    <Redirect to={ links["HOME_PAGE"].route } />
                 </Switch>
             </React.Fragment>
         </BrowserRouter>
