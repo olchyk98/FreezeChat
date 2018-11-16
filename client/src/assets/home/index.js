@@ -12,7 +12,7 @@ import { convertTime } from '../../glTools';
 import Navigation from './Navigation';
 import DisplayConversationsList from './DisplayConversationsList';
 
-const messagesLimiter = 20;
+const messagesLimit = 20;
 
 let stickers = {},
     actions = {};
@@ -422,10 +422,24 @@ class App extends Component {
 
         this.messagesSubscription = null;
         this.currSearchQuery = "";
+        this._isMounted = false;
     }
 
     componentDidMount() {
-        this.fetchPrimary();
+        this._isMounted = true;
+        this.fetchPrimary(); // load conversations
+        {
+            let a = this.props.match.params.victimid;
+            if(a) this.pickConversation(a); // load exact conversation
+        }
+    }
+
+    componentWillUnmount() {
+        this._isMounted = false;
+        {
+            let a = this.messagesSubscription; // Link
+            if(a) a.unsubscribe();
+        }
     }
 
     fetchPrimary = () => {
@@ -447,12 +461,13 @@ class App extends Component {
                             unSeenMessages(id: $id)
                         }
                     }
-                } 
+                }
             `,
             variables: {
                 id, authToken
             }
         }).then(({ data: { user } }) => {
+            if(!this._isMounted) return;
             if(!user) this.props.failSession();
 
             this.props.updateSession(user);
@@ -465,7 +480,7 @@ class App extends Component {
         let a = this.state.conversation;
 
         let { id, authToken } = cookieControl.get("userdata");
-       this.messagesSubscription = this.conversationSubscriptionPromise = client.subscribe({
+       this.messagesSubscription = client.subscribe({
             query: gql`
                 subscription($id: ID!, $authToken: String!, $conversationID: ID!) {
                     newChatMessage(id: $id, authToken: $authToken, conversationID: $conversationID) {
@@ -489,7 +504,7 @@ class App extends Component {
                 conversationID: a.id
             }
         }).subscribe({next: ({ data: { newChatMessage: message } }) => {
-            if(!message || !this.state.conversation || this.state.conversation.id !== a.id) return;
+            if(!this._isMounted || !message || !this.state.conversation || this.state.conversation.id !== a.id) return;
 
             this.setState(({ conversation, conversation: { messages } }) => ({
                 conversation: {
@@ -522,7 +537,7 @@ class App extends Component {
                 id, authToken
             }
         }).subscribe({next: ({ data: { chatConversationUpdated: conversation } }) => {
-            if(!this.props.user || !this.props.user.conversations) return;
+            if(!this._isMounted || !this.props.user || !this.props.user.conversations) return;
 
             let a = Array.from(this.props.user.conversations),
                 b = a.findIndex( ({ id }) => id === conversation.id );
@@ -563,8 +578,64 @@ class App extends Component {
                 conversationID: a.id
             }
         }).then(({ data: { viewMessages: data } }) => {
+            if(!this._isMounted) return;
             if(!data) return this.failSession();
         }).catch(this.failSession);
+    }
+
+    pickConversation = victimID => {
+        this.setState(() => ({
+            conversation: false,
+            messagesIsFetchable: true
+        }));
+
+        let { id, authToken } = cookieControl.get("userdata");
+        /* 
+            createConversation mutation returns conversation,
+            if it exists
+        */
+        client.mutate({
+            mutation: gql`
+                mutation($id: ID!, $authToken: String!, $victimID: ID!, $limit: Int) {
+                    createConversation(id: $id, authToken: $authToken, victimID: $victimID) {
+                        id,
+                        previewTitle(id: $id),
+                        messages(limit: $limit) {
+                            id,
+                            content,
+                            time,
+                            type,
+                            isSeen,
+                            creator {
+                                id,
+                                avatar
+                            }
+                        }
+                    }
+                }
+            `,
+            variables: {
+                id, authToken, victimID,
+                limit: messagesLimit
+            }
+        }).then(({ data: { createConversation: conversation } }) => {
+            if(!this._isMounted) return;
+            if(!conversation) return this.props.failSession();
+
+            this.setState(() => ({
+                conversation: {
+                    ...conversation,
+                    messages: conversation.messages.reverse()
+                }
+            }), () => {
+                if(this.messagesSubscription) { 
+                    this.messagesSubscription.unsubscribe();
+                    this.messagesSubscription = null;
+                }
+                this.viewMessages();
+                this.subscribeToMessages();
+            });
+        }).catch(this.props.failSession);
     }
 
     getConversation = conversationID => {
@@ -598,9 +669,10 @@ class App extends Component {
             `,
             variables: {
                 id, authToken, conversationID,
-                limit: messagesLimiter
+                limit: messagesLimit
             }
         }).then(({ data: { conversation } }) => {
+            if(!this._isMounted) return;
             if(!conversation) return this.props.failSession();
 
             this.setState(() => ({
@@ -667,6 +739,7 @@ class App extends Component {
                 conversationID: this.state.conversation.id
             }
         }).then(({ data: { createMessage: message } }) => {
+            if(!this._isMounted) return;
             if(!message) return this.props.failSession;
 
             c.id = message.id;
@@ -718,12 +791,12 @@ class App extends Component {
                 id, authToken,
                 conversationID: c,
                 cursorID: b[0].id,
-                limit: messagesLimiter
+                limit: messagesLimit
             }
         }).then(({ data: { conversationMessages: pack } }) => {
             QrP(false);
             if(!pack) return this.props.failSession();
-            if(!this.state.conversation || c !== this.state.conversation.id) return;
+            if(!this._isMounted || !this.state.conversation || c !== this.state.conversation.id) return;
 
             this.setState(({ conversation, conversation: { messages } }) => ({
                 conversation: {
@@ -733,7 +806,7 @@ class App extends Component {
                         ...messages
                     ]
                 },
-                messagesIsFetchable: pack.length >= messagesLimiter // XIE
+                messagesIsFetchable: pack.length >= messagesLimit // XIE
             }));
         }).catch(this.props.failSession);
     }
@@ -773,7 +846,7 @@ class App extends Component {
             }
         }).then(({ data: { searchConversations: cnv } }) => {
             if(!cnv) return this.failSession();
-            if(this.currSearchQuery !== a) return;
+            if(!this._isMounted || this.currSearchQuery !== a) return;
 
             qRa(cnv);
         }).catch(() => this.failSession());

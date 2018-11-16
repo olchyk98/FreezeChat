@@ -1,7 +1,7 @@
 const links = {
     "HOME_PAGE": {
         absolute: '/home',
-        route: '/home'
+        route: '/home/:victimid?'
     },
     "REGISTER_PAGE": {
         absolute: '/register',
