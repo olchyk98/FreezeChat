@@ -1,0 +1,298 @@
+:root {
+    --settings_navw:350px;
+    --settings_dispplradd:10px;
+    --settings_dispudpadd:17.5px;
+    --settings_activecol:#009BFF;
+    --settings_displayaddh:70px;
+}
+
+.rn-settings {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:rgb(244, 245, 250);
+    padding-top:var(--settings_dispudpadd);
+    padding-bottom:var(--settings_dispudpadd);
+    height:calc(100vh - var(--settings_dispudpadd) * 2);
+}
+
+.rn-settings-nav,
+.rn-settings-mat {
+    height:100%;
+    background:white;
+    border-radius:5px;
+    box-shadow:0px 0px 15px -5px rgba(0, 0, 0, .25);
+}
+
+.rn-settings-nav {
+    width:calc(var(--settings_navw) - var(--settings_dispplradd));
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    justify-content:flex-start;
+}
+
+.rn-settings-nav-btn,
+.rn-settings-nav-btn:before {
+    transition:.4s;
+}
+
+.rn-settings-nav-btn {
+    --offcol:rgba(0, 0, 0, .5);
+
+    height:65px;
+    border-bottom:1px solid rgba(0, 0, 0, .15);
+    display:flex;
+    position:relative;
+    cursor:pointer;
+}
+
+.rn-settings-nav-btn:before {
+    content:'';
+    position:absolute;
+    top:0;
+    right:0;
+    height:100%;
+    width:2px;
+    background:var(--settings_activecol);
+    opacity:0;
+}
+
+.rn-settings-nav-btn.active:before {
+    opacity:1;
+}
+
+.rn-settings-nav-btn-icon,
+.rn-settings-nav-btn-info {
+    display:flex;
+    justify-content:center;
+}
+
+.rn-settings-nav-btn-icon {
+    --width:65px;
+
+    width:var(--width);
+    font-size:1.35em;
+    color:var(--offcol);
+    align-items:center;
+}
+
+.rn-settings-nav-btn-icon > svg {
+    position:relative;
+    bottom:-2px;
+}
+
+.rn-settings-nav-btn-info {
+    width:calc(100% - var(--width));
+    flex-direction:column;
+}
+
+.rn-settings-nav-btn-info-text {
+    --margin:.5px;
+
+    margin-top:var(--margin);
+    margin-bottom:var(--margin);
+    font-family:"Quicksand";
+}
+
+.rn-settings-nav-btn-info-title {
+    color:black;
+    font-size:.95em;
+    font-weight:400;
+}
+
+.rn-settings-nav-btn.active .rn-settings-nav-btn-info-title,
+.rn-settings-nav-btn.active .rn-settings-nav-btn-icon {
+    color:var(--settings_activecol);
+}
+
+.rn-settings-nav-btn-info-desc {
+    color:rgba(0, 0, 0, .65);
+    font-size:.85em;
+}
+
+.rn-settings-mat {
+    width:calc(100% - var(--settings_navw) - var(--settings_dispplradd));
+    min-width:450px;
+    position:relative;
+    overflow:hidden;
+}
+
+.rn-settings-mat-display {
+    height:100%;
+    width:100%;
+    position:absolute;
+    top:0;
+    left:0;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    opacity:0;
+    transition:.4s;
+    z-index:0;
+    background:white;
+}
+
+.rn-settings-mat-display.visible {
+    z-index:5;
+    opacity:1;
+}
+
+.rn-settings-mat-display-title,
+.rn-settings-mat-display-submitor {
+    --padding:15px;
+
+    height:var(--settings_displayaddh);
+    width:calc(100% - var(--padding));
+    padding-left:var(--padding);
+    padding-right:var(--padding);
+    display:flex;
+    align-items:center;
+    font-family:"Lato";
+    font-size:1.05em;
+}
+
+.rn-settings-mat-display-title {
+    border-bottom:1px solid rgba(0, 0, 0, .1);
+    font-size:1.25em;
+}
+
+.rn-settings-mat-display-title > *,
+.rn-settings-mat-display-submitor {
+    position:relative;
+    bottom:-2px;
+}
+
+.rn-settings-mat-display-submitor {
+    border-top:1px solid rgba(0, 0, 0, .1);
+}
+
+.rn-settings-mat-display-submitor-btn {
+    --padding:20px;
+    
+    height:65%;
+    background:#435CC8;
+    border-radius:5px;
+    font-size:.8em;
+    color:white;
+    padding-left:var(--padding);
+    padding-right:var(--padding);
+    cursor:pointer;
+    outline:0;
+    transition:.1s;
+}
+
+.rn-settings-mat-display-submitor-btn:active {
+    transform:scale(.95);
+    background:#374fb8;
+}
+
+.rn-settings-mat-display-mat {
+    --padding:15px;
+
+    padding:var(--padding);
+    height:calc(100% - var(--settings_displayaddh) - var(--padding) * 2);
+    overflow:scroll;
+}
+
+.rn-settings-mat-display-mat-settings-avatar {
+    display:flex;
+    align-items:center;
+    position:relative;
+}
+
+.rn-settings-mat-display-mat-settings-avatar-mat {
+    --size:55px;
+
+    height:var(--size);
+    width:var(--size);
+    border-radius:50%;
+    overflow:hidden;
+}
+
+.rn-settings-mat-display-mat-settings-avatar-mat > img {
+    height:100%;
+    width:100%;
+    object-fit:cover;
+    object-position:center;
+}
+
+.rn-settings-mat-display-mat-settings-avatar > * {
+    margin-left:17.5px;
+}
+
+.rn-settings-mat-display-mat-settings-avatar > *:first-child {
+    margin-left:0;
+}
+
+.rn-settings-mat-display-mat-settings-avatar-file,
+.rn-settings-mat-display-mat-settings-avatar-remove {
+    cursor:pointer;
+    font-weight:500;
+}
+
+.rn-settings-mat-display-mat-settings-avatar-file {
+    color:#3D58C7;
+    font-size:.925em;
+}
+
+.rn-settings-mat-display-mat-settings-avatar-remove {
+    color:#ED4D83;
+    font-size:.85em;
+}
+
+.rn-settings-mat-display-mat-settings-avatar-remove:hover,
+.rn-settings-mat-display-mat-settings-avatar-file:hover {
+    text-decoration:underline;
+}
+
+.rn-settings-ASSETS-input {
+    --margin:10px;
+
+    width:215px;
+    max-width:90%;
+    height:35px;
+    position:relative;
+    border-radius:45px;
+    border:1px solid rgba(0, 0, 0, .1);
+    padding:0;
+    margin-top:var(--margin);
+    margin-bottom:var(--margin);
+    background:white;
+    display:flex;
+    align-items:stretch;
+}
+
+.rn-settings-ASSETS-input-icon {
+    width:30px;
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    color:rgba(0, 0, 0, .45);
+    flex-shrink:0;
+}
+
+.rn-settings-ASSETS-input-icon > svg {
+    position:relative;
+    right:-.5px;
+}
+
+.rn-settings-ASSETS-input-mat {
+    --padding:10px;
+    
+    padding-left:var(--padding);
+    padding-right:var(--padding);
+    width:calc(100% - 40px - var(--padding) * 2);
+    font-size:.9em;
+}
+
+.rn-settings-mat-display-mat-form {
+    margin-top:25px;
+}
+
+.rn-settings-mat-display-mat-form > * {
+    --margin:15px;
+
+    margin-top:var(--margin);
+    margin-bottom:var(--margin);
+}

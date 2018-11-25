@@ -9,6 +9,7 @@ import Nav from './assets/navigation';
 import Home from './assets/home';
 import Register from './assets/register';
 import Search from "./assets/search";
+import Settings from './assets/settings';
 
 // Redux
 import { Provider } from 'react-redux';
@@ -62,6 +63,12 @@ ReactDOM.render(
                         component={ Search }
                         redirect={ links["REGISTER_PAGE"].route }
                         exact
+                    />
+                    <NeedleRoute
+                        path={ links["SETTINGS_PAGE"].route }
+                        condition={ cookieControl.get("userdata") }
+                        component={ Settings }
+                        redirect={ links["REGISTER_PAGE"] }
                     />
                     <NeedleRoute
                         path={ links["REGISTER_PAGE"].route }
