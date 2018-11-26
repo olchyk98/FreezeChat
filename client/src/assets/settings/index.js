@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import './main.css';
 
+import { connect } from 'react-redux';
+
 const image = "http://localhost:4000/files/avatars/DYrlDOWy7WtZdRBd2okSpATK8fOp16qZquC4FUBL9rblOTdMlNBiiOka3wM3LblVCQOruix12mbtNpUxuZtGr2obPn3UauHQLmeEJU7H3MXDaJOGYmv3VtRa4ArN9ylx.png";
 
 class NavButton extends Component {
@@ -44,6 +46,26 @@ class Display extends Component {
 }
 
 class Input extends Component {
+    constructor(props) {
+        super(props);
+
+        this.matRef = React.createRef();
+    }
+
+    // -------------------- //
+    componentDidMount(a) {
+        if(!a || this.props._defaultValue !== a._defaultValue) {
+            this.matRef.value = this.props._defaultValue;
+        }
+    }
+
+    componentDidUpdate(a) {
+        if(this.props._defaultValue !== a._defaultValue) {
+            this.matRef.value = this.props._defaultValue;
+        }
+    }
+    // -------------------- //
+
     render() {
         return(
             <div className="rn-settings-ASSETS-input">
@@ -54,6 +76,8 @@ class Input extends Component {
                     className="rn-settings-ASSETS-input-mat definp"
                     type={ this.props._type }
                     placeholder={ this.props._placeholder }
+                    onChange={ ({ target: { value } }) => this.props._onChange(value) }
+                    ref={ ref => this.matRef = ref }
                 />
             </div>
         );
@@ -61,6 +85,50 @@ class Input extends Component {
 }
 
 class App extends Component {
+    constructor(props) {
+        super(props);
+
+        this.state = {
+            stage: 'NO_STAGE',
+            data: {
+                account: {
+                    name: "",
+                    password: "",
+                    repassword: ""
+                }
+            }
+        }
+    }
+
+    componentDidUpdate(a) {
+        let b = b => ((Object.keys(b).length) ? true:false);
+        if(!b(a.user) && b(this.props.user)) {
+            this.setState(({ data }) => ({
+                data: {
+                    ...data,
+                    account: {
+                        name: this.props.user.name,
+                        password: ""
+                    }
+                }
+            }));
+        }
+    }
+
+    setValData = (field, value) => {
+        if(field === "password" && !value.replace(/\*/g, "").length) return;
+
+        this.setState(({ data, data: { account } }) => ({
+            data: {
+                ...data,
+                account: {
+                    ...account,
+                    [field]: value
+                }
+            }
+        }));
+    }
+
     render() {
         return(
             <div className="rn rn-settings">
@@ -70,26 +138,36 @@ class App extends Component {
                             {
                                 icon: <i className="far fa-user" />,
                                 title: "Account settings",
-                                desc: "Settings for your account"
+                                desc: "Settings for your account",
+                                stage: "ACCOUNT_STAGE"
                             },
                             {
                                 icon: <i className="fas fa-object-group" />,
                                 title: "App settings",
-                                desc: "Settings for application design"
+                                desc: "Settings for application",
+                                stage: "APP_STAGE"
                             }
-                        ].map(({ icon, title, desc }, index) => (
+                        ].map(({ icon, title, desc, stage }, index) => (
                             <NavButton
                                 key={ index }
                                 icon={ icon }
                                 title={ title }
                                 desc={ desc }
-                                _onClick={ () => null }
+                                active={ this.state.stage === stage }
+                                _onClick={ () => this.setState({ stage }) }
                             />
                         ))
                     }
                 </div>
                 <div className="rn-settings-mat">
-                    <Display title="Account" visible={ true }>
+                    {
+                        (this.state.stage === "NO_STAGE") ? (
+                            <span className="rn-settings-nav-alertion">
+                                Open a tab for see your settings
+                            </span>
+                        ) : null
+                    }
+                    <Display title="Account" visible={ this.state.stage === "ACCOUNT_STAGE" }>
                         <div className="rn-settings-mat-display-mat-settings-avatar">
                             <div className="rn-settings-mat-display-mat-settings-avatar-mat">
                                 <img
@@ -109,22 +187,39 @@ class App extends Component {
                                     {
                                         type: "text",
                                         placeholder: "Name",
+                                        field: "name",
                                         icon: <i className="far fa-user" />
                                     },
                                     {
                                         type: "password",
                                         placeholder: "Password",
+                                        field: "password",
+                                        icon: <i className="fas fa-star-of-life" />
+                                    },
+                                    {
+                                        type: "password",
+                                        placeholder: "Repeat your new pass",
+                                        field: "repassword",
                                         icon: <i className="fas fa-star-of-life" />
                                     }
-                                ].map(({ type, placeholder, icon }, index) => (
+                                ].map(({ type, placeholder, icon, field }, index) => (
                                     <Input
+                                        key={ index }
                                         _type={ type }
                                         _placeholder={ placeholder }
                                         icon={ icon }
+                                        _defaultValue={({
+                                            password: "*******",
+                                            name: (this.state.data.account.name || "")
+                                        }[field]) || ""}
+                                        _onChange={ value => this.setValData(field, value) }
                                     />
                                 ))
                             }
                         </div>
+                    </Display>
+                    <Display title="Application" visible={ this.state.stage === "APP_STAGE" }>
+
                     </Display>
                 </div>
             </div>
@@ -132,4 +227,10 @@ class App extends Component {
     }
 }
 
-export default App;
+const mapStateToProps = ({ user }) => ({
+    user
+});
+
+export default connect(
+    mapStateToProps
+)(App);
