@@ -89,6 +89,19 @@ class Input extends Component {
     }
 }
 
+class Slider extends Component {
+    render() {
+        return(
+            <div className={ `rn-settings-ASSETS-slider${ (!(this.props.enabled === 'true')) ? "" : " active" }` } onClick={ this.props._onClick }>
+                <span>{ this.props.title }</span>
+                <div>
+                    <div />
+                </div>
+            </div>
+        )
+    }
+}
+
 class App extends Component {
     constructor(props) {
         super(props);
@@ -227,7 +240,15 @@ class App extends Component {
             this.props.updateSession({
                 avatar
             });
-        }).catch(console.log);
+        }).catch(this.props.failSession);
+    }
+
+    toggleDarkMode = () => {
+        let a = localStorage.getItem("inDarkmode");
+        if(a !== null) localStorage.setItem("inDarkmode", !(a === 'true'));
+        else localStorage.setItem("inDarkmode", true);
+
+        this.forceUpdate();
     }
 
     render() {
@@ -325,7 +346,11 @@ class App extends Component {
                         </div>
                     </Display>
                     <Display title="Application" visible={ this.state.stage === "APP_STAGE" }>
-
+                        <Slider
+                            enabled={ localStorage.getItem("inDarkmode") }
+                            title="Dark mode"
+                            _onClick={ this.toggleDarkMode }
+                        />
                     </Display>
                 </div>
             </div>
