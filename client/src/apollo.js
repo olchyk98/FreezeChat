@@ -9,7 +9,10 @@ import api from './api';
 
 const client = new ApolloClient({
     link: new RetryLink().split(
-        sys => getMainDefinition(sys.query).operation === "subscription",
+        sys => {
+            console.log(getMainDefinition(sys.query).operation);
+            return getMainDefinition(sys.query).operation === "subscription";
+        },
         new WebSocketLink({
             uri: api.websocket,
             options: {

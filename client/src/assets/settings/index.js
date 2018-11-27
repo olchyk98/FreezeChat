@@ -2,6 +2,11 @@ import React, { Component } from 'react';
 import './main.css';
 
 import { connect } from 'react-redux';
+import { gql } from 'apollo-boost';
+
+import client from '../../apollo';
+import apiPath from '../../api';
+import { cookieControl } from '../../glTools';
 
 const image = "http://localhost:4000/files/avatars/DYrlDOWy7WtZdRBd2okSpATK8fOp16qZquC4FUBL9rblOTdMlNBiiOka3wM3LblVCQOruix12mbtNpUxuZtGr2obPn3UauHQLmeEJU7H3MXDaJOGYmv3VtRa4ArN9ylx.png";
 
@@ -36,7 +41,7 @@ class Display extends Component {
                     { this.props.children }
                 </div>
                 <div className="rn-settings-mat-display-submitor">
-                    <button className="rn-settings-mat-display-submitor-btn">
+                    <button className="rn-settings-mat-display-submitor-btn" onClick={ this.props._onSubmit }>
                         Save changes
                     </button>
                 </div>
@@ -68,7 +73,7 @@ class Input extends Component {
 
     render() {
         return(
-            <div className="rn-settings-ASSETS-input">
+            <div className={ `rn-settings-ASSETS-input${ (!this.props.error) ? "" : " error" }` }>
                 <div className="rn-settings-ASSETS-input-icon">
                     { this.props.icon }
                 </div>
@@ -94,39 +99,135 @@ class App extends Component {
                 account: {
                     name: "",
                     password: "",
-                    repassword: ""
+                    repassword: "",
+                    avatar: "",
+                    previewAvatar: null
                 }
-            }
+            },
+            inError: []
         }
     }
 
     componentDidUpdate(a) {
         let b = b => ((Object.keys(b).length) ? true:false);
         if(!b(a.user) && b(this.props.user)) {
-            this.setState(({ data }) => ({
+            this.setState(({ data, data: { account } }) => ({
                 data: {
                     ...data,
                     account: {
-                        name: this.props.user.name,
-                        password: ""
+                        ...account,
+                        name: this.props.user.name
                     }
                 }
             }));
         }
     }
 
-    setValData = (field, value) => {
-        if(field === "password" && !value.replace(/\*/g, "").length) return;
+    componentWillUnmount() {
+        URL.revokeObjectURL(this.state.data.account.previewAvatar);
+    }
 
-        this.setState(({ data, data: { account } }) => ({
+    setValData = (stage, field, value) => {
+        if(field === "password" && !value.replace(/\*/g, "").length) return;
+        if(field === "avatar" && stage === "account") {
+            URL.revokeObjectURL(this.state.data.account.previewAvatar);
+            this.setState(({ data, data: { account } }) => ({
+                data: {
+                    ...data,
+                    account: {
+                        ...account,
+                        avatar: value,
+                        previewAvatar: URL.createObjectURL(value)
+                    }
+                }
+            }));
+            return;
+        }
+
+        this.setState(({ data }) => ({
             data: {
                 ...data,
-                account: {
-                    ...account,
+                [stage]: {
+                    ...data[stage],
                     [field]: value
                 }
             }
         }));
+    }
+
+    submitData = async () => {
+        await this.setState(() => ({ inError: [] }));
+
+        switch(this.state.stage) {
+            case 'ACCOUNT_STAGE': {
+                let { name, password, repassword, avatar } = this.state.data.account,
+                    a = a => ((a.replace(/ /g, "").length) ? true:false),
+                    b = false,
+                    c = (...c) => this.setState(({ inError }) => ({ inError: [...inError, ...c] }));
+
+                if(!a(name)) {
+                    b = true;
+                    c("name");
+                }
+                if(password !== "" && (!a(password) || !a(repassword) || a(password) !== a(repassword))) {
+                    b = true;
+                    c("password", "repassword");
+                }
+
+                if(!b) { // submit
+                    let { id, authToken } = cookieControl.get("userdata");
+                    client.mutate({
+                        mutation: gql`
+                            mutation($id: ID!, $authToken: String!, $name: String, $password: String, $avatar: Upload) {
+                                settingAccount(id: $id, authToken: $authToken, name: $name, password: $password, avatar: $avatar) {
+                                    id,
+                                    name,
+                                    avatar
+                                }
+                            }
+                        `,
+                        variables: {
+                            id, authToken,
+                            name, password,
+                            avatar
+                        }
+                    }).then(({ data: { settingAccount } }) => {
+                        if(!settingAccount) return this.props.failSession();
+
+                        let { avatar } = settingAccount;
+                        this.props.updateSession({
+                            name,
+                            avatar
+                        });
+                    }).catch(this.props.failSession);
+                }
+            } break;
+            default:break;
+        }
+    }
+
+    deleteAvatar = () => {
+        let { id, authToken } = cookieControl.get("userdata");
+        client.mutate({
+            mutation: gql`
+                mutation($id: ID!, $authToken: String!) {
+                    deleteAvatar(id: $id, authToken: $authToken) {
+                        id,
+                        avatar
+                    }
+                }
+            `,
+            variables: {
+                id, authToken
+            }
+        }).then(({ data: { deleteAvatar } }) => {
+            if(!deleteAvatar) return this.props.failSession();
+
+            let { avatar } = deleteAvatar;
+            this.props.updateSession({
+                avatar
+            });
+        }).catch(console.log);
     }
 
     render() {
@@ -154,7 +255,7 @@ class App extends Component {
                                 title={ title }
                                 desc={ desc }
                                 active={ this.state.stage === stage }
-                                _onClick={ () => this.setState({ stage }) }
+                                _onClick={ () => this.setState({ stage, inError: [] }) }
                             />
                         ))
                     }
@@ -167,19 +268,23 @@ class App extends Component {
                             </span>
                         ) : null
                     }
-                    <Display title="Account" visible={ this.state.stage === "ACCOUNT_STAGE" }>
+                    <Display title="Account" visible={ this.state.stage === "ACCOUNT_STAGE" } _onSubmit={ this.submitData }>
                         <div className="rn-settings-mat-display-mat-settings-avatar">
                             <div className="rn-settings-mat-display-mat-settings-avatar-mat">
                                 <img
-                                    src={ image }
-                                    alt="set"
+                                    src={ this.state.data.account.previewAvatar || apiPath.storage + this.props.user.avatar }
+                                    alt="your avatar"
                                 />
                             </div>
-                            <input type="file" className="hidden" id="rn-settings-mat-display-mat-settings-avatar-file" />
+                            <input
+                                type="file" className="hidden"
+                                accept="image/*"
+                                onChange={ ({ target: { files } }) => this.setValData("account", "avatar", files[0]) }
+                                id="rn-settings-mat-display-mat-settings-avatar-file" />
                             <label htmlFor="rn-settings-mat-display-mat-settings-avatar-file" className="rn-settings-mat-display-mat-settings-avatar-file">
                                 Upload new image
                             </label>
-                            <button className="rn-settings-mat-display-mat-settings-avatar-remove definp">Remove</button>
+                            <button className="rn-settings-mat-display-mat-settings-avatar-remove definp" onClick={ this.deleteAvatar }>Remove</button>
                         </div>
                         <div className="rn-settings-mat-display-mat-form">
                             {
@@ -208,11 +313,12 @@ class App extends Component {
                                         _type={ type }
                                         _placeholder={ placeholder }
                                         icon={ icon }
+                                        error={ this.state.inError.includes(field) }
                                         _defaultValue={({
                                             password: "*******",
                                             name: (this.state.data.account.name || "")
                                         }[field]) || ""}
-                                        _onChange={ value => this.setValData(field, value) }
+                                        _onChange={ value => this.setValData("account", field, value) }
                                     />
                                 ))
                             }
@@ -231,6 +337,12 @@ const mapStateToProps = ({ user }) => ({
     user
 });
 
+const mapActionsToProps = {
+    failSession: () => ({ type: "UPDATE_ERROR_STATE", payload: true }),
+    updateSession: payload => ({ type: "SET_SESSION_DATA", payload })
+}
+
 export default connect(
-    mapStateToProps
+    mapStateToProps,
+    mapActionsToProps
 )(App);

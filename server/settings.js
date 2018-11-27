@@ -1,6 +1,7 @@
 const settings = {
     paths: {
-        avatars: '/files/avatars/'
+        avatars: '/files/avatars/',
+        defaultAvatar: '/files/default/avatar.jpg'
     }
 }
 

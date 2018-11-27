@@ -322,12 +322,11 @@ const RootMutation = new GraphQLObjectType({
 
                 // Receive avatar
                 let avatarPath = '';
-                    {
-                        let { filename, stream } = await avatar;
-                        if(stream && filename) avatarPath = settings.paths.avatars + generateNoise(128) + '.' + getExtension(filename);
-                        stream.pipe(fileSystem.createWriteStream('.' + avatarPath));
-                    }
-                if(!avatarPath) return null;
+                if(avatar) {
+                    let { filename, stream } = await avatar;
+                    if(stream && filename) avatarPath = settings.paths.avatars + generateNoise(128) + '.' + getExtension(filename);
+                    stream.pipe(fileSystem.createWriteStream('.' + avatarPath));
+                }
 
                 // Create user
                     // Generate token
@@ -338,7 +337,7 @@ const RootMutation = new GraphQLObjectType({
                     name,
                     password,
                     status: "Free",
-                    avatar: avatarPath,
+                    avatar: avatarPath || settings.paths.defaultAvatar,
                     registeredTime: new Date(),
                     authTokens: [authToken],
                     lastAuthToken: authToken
@@ -489,6 +488,54 @@ const RootMutation = new GraphQLObjectType({
                 }, { isSeen: true });
 
                 return true;
+            }
+        },
+        settingAccount: {
+            type: UserType,
+            args: {
+                id: { type: new GraphQLNonNull(GraphQLID) },
+                authToken: { type: new GraphQLNonNull(GraphQLString) },
+                name: { type: GraphQLString },
+                password: { type: GraphQLString },
+                avatar: { type: GraphQLUpload }
+            },
+            async resolve(_, { id, authToken, name, password, avatar }) {
+                let a = {}
+
+                if(name) a.name = name;
+                if(password) a.password = password;
+                if(avatar && typeof avatar !== "string") {
+                    let { stream, filename } = await avatar,
+                        avatarPath = settings.paths.avatars + generateNoise(128) + '.' + getExtension(filename);
+                    stream.pipe(fileSystem.createWriteStream('.' + avatarPath));
+                    a.avatar = avatarPath;
+                }
+
+                if(!Object.keys(a).length) return validateAccount(id, authToken);
+                return User.findOneAndUpdate({
+                    _id: id,
+                    authTokens: {
+                        $in: [authToken]
+                    }
+                }, a, (__, ns) => ns);
+            }
+        },
+        deleteAvatar: {
+            type: UserType,
+            args: {
+                id: { type: new GraphQLNonNull(GraphQLID) },
+                authToken: { type: new GraphQLNonNull(GraphQLString) }
+            },
+            resolve(_, { id: _id, authToken }) {
+                console.log(settings.paths.defaultAvatar);
+                return User.findOneAndUpdate({
+                    _id,
+                    authTokens: {
+                        $in: [authToken]
+                    }
+                }, {
+                    avatar: settings.paths.defaultAvatar
+                }, (__, ns) => ns);
             }
         }
     }

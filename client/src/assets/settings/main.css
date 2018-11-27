@@ -193,7 +193,7 @@
 }
 
 .rn-settings-mat-display-mat {
-    --padding:15px;
+    --padding:20px;
 
     padding:var(--padding);
     height:calc(100% - var(--settings_displayaddh) - var(--padding) * 2);
@@ -254,7 +254,7 @@
 .rn-settings-ASSETS-input {
     --margin:10px;
 
-    width:215px;
+    width:245px;
     max-width:90%;
     height:35px;
     position:relative;
@@ -266,6 +266,11 @@
     background:white;
     display:flex;
     align-items:stretch;
+    transition:.4s;
+}
+
+.rn-settings-ASSETS-input.error {
+    border:1px solid red;
 }
 
 .rn-settings-ASSETS-input-icon {
@@ -292,25 +297,26 @@
 }
 
 .rn-settings-mat-display-mat-form {
-    margin-top:10px;
+    margin-top:30px;
     display:flex;
-    align-items:center;
+    align-items:flex-start;
+    flex-direction:column;
     flex-wrap:wrap;
 }
 
 .rn-settings-mat-display-mat-form > * {
-    --margin:15px;
+    --margin:7.5px;
 
-    margin-left:var(--margin);
-    margin-right:var(--margin);
+    margin-top:var(--margin);
+    margin-bottom:var(--margin);
 }
 
 .rn-settings-mat-display-mat-form > *:first-child {
-    margin-left:0;
+    margin-top:0;
 }
 
 .rn-settings-mat-display-mat-form > *:last-child {
-    margin-right:0;
+    margin-bottom:0;
 }
 
 .rn-settings-nav-alertion {
