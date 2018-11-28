@@ -195,7 +195,6 @@ class App extends Component {
                             mutation($id: ID!, $authToken: String!, $name: String, $password: String, $avatar: Upload) {
                                 settingAccount(id: $id, authToken: $authToken, name: $name, password: $password, avatar: $avatar) {
                                     id,
-                                    name,
                                     avatar
                                 }
                             }
@@ -208,11 +207,12 @@ class App extends Component {
                     }).then(({ data: { settingAccount } }) => {
                         if(!settingAccount) return this.props.failSession();
 
-                        let { avatar } = settingAccount;
-                        this.props.updateSession({
-                            name,
+                        let { avatar } = settingAccount,
+                            d = {
                             avatar
-                        });
+                        }
+                        if(name) d.name = name;
+                        this.props.updateSession(d);
                     }).catch(this.props.failSession);
                 }
             } break;

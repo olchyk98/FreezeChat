@@ -9,7 +9,7 @@ const schema = require('./schema');
 let getDate = () => (new Date()).toLocaleString() + " :: ";
 
 // Database
-mongoose.connect("mongodb://oles:0password@ds259253.mlab.com:59253/graphql-freezechat", {
+mongoose.connect("mongodb://user:password@ds259253.mlab.com:00000/database-section", {
     useNewUrlParser: true
 });
 mongoose.connection.once('open', () => console.log(getDate() + "Connected to database!"));

@@ -121,7 +121,7 @@ const ConversationType = new GraphQLObjectType({
             },
             resolve: async ({ members }, { id }) => {
                 let a = await User.findById(
-                    members.find( io => str(io) === str(id) )
+                    members.find( io => str(io) !== str(id) )
                 );
                 if(a) return a.avatar;
                 else return "";
