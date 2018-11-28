@@ -7,6 +7,7 @@ import { gql } from 'apollo-boost';
 import client from '../../apollo';
 import apiPath from '../../api';
 import { cookieControl } from '../../glTools';
+import themeRunner from '../../theme.runner';
 
 const image = "http://localhost:4000/files/avatars/DYrlDOWy7WtZdRBd2okSpATK8fOp16qZquC4FUBL9rblOTdMlNBiiOka3wM3LblVCQOruix12mbtNpUxuZtGr2obPn3UauHQLmeEJU7H3MXDaJOGYmv3VtRa4ArN9ylx.png";
 
@@ -92,7 +93,7 @@ class Input extends Component {
 class Slider extends Component {
     render() {
         return(
-            <div className={ `rn-settings-ASSETS-slider${ (!(this.props.enabled === 'true')) ? "" : " active" }` } onClick={ this.props._onClick }>
+            <div className={ `rn-settings-ASSETS-slider${ (!this.props.enabled) ? "" : " active" }` } onClick={ this.props._onClick }>
                 <span>{ this.props.title }</span>
                 <div>
                     <div />
@@ -178,7 +179,7 @@ class App extends Component {
                     b = false,
                     c = (...c) => this.setState(({ inError }) => ({ inError: [...inError, ...c] }));
 
-                if(!a(name)) {
+                if(!avatar && !a(name)) {
                     b = true;
                     c("name");
                 }
@@ -244,10 +245,7 @@ class App extends Component {
     }
 
     toggleDarkMode = () => {
-        let a = localStorage.getItem("inDarkmode");
-        if(a !== null) localStorage.setItem("inDarkmode", !(a === 'true'));
-        else localStorage.setItem("inDarkmode", true);
-
+        themeRunner({'light':'dark', 'dark':'light'}[localStorage.getItem("theme")] || 'OPP_MODE');
         this.forceUpdate();
     }
 
@@ -347,7 +345,7 @@ class App extends Component {
                     </Display>
                     <Display title="Application" visible={ this.state.stage === "APP_STAGE" }>
                         <Slider
-                            enabled={ localStorage.getItem("inDarkmode") }
+                            enabled={ localStorage.getItem("theme") === 'dark' }
                             title="Dark mode"
                             _onClick={ this.toggleDarkMode }
                         />

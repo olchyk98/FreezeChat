@@ -1,8 +1,6 @@
 .gl-nav {
-    --color:#D6D8F3;
-
-    background:var(--color);
-    box-shadow:1px 0px 5px 0px var(--color);
+    background:var(--__design__navcol);
+    box-shadow:1px 0px 5px 0px var(--__design__navcol);
     flex-shrink:0;
     position:relative;
     z-index:4;
@@ -94,13 +92,14 @@
     font-family:"Quicksand";
     font-weight:500;
     font-size:.95em;
+    color:var(--__design__navname);
 }
 
 .gl-nav-mat-btn {
     --margin:35px;
     --padding:5px;
 
-    color:rgba(0, 0, 0, .3);
+    color:var(--__design__lowblack);
     text-transform:uppercase;
     font-size:.9em;
     cursor:pointer;
@@ -144,7 +143,7 @@
 }
 
 .gl-nav-mat-btn:hover {
-    color:rgba(0, 0, 0, .65);
+    color:var(--__design__midblack);
 }
 
 .gl-nav-mat-btn.active {

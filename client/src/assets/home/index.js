@@ -471,6 +471,8 @@ class App extends Component {
             if(!this._isMounted) return;
             if(!user) this.props.failSession();
 
+            if(this.props.user && this.props.user.status) delete user.status; 
+
             this.props.updateSession(user);
             this.subscribeToConversations();
         }).catch(this.props.failSession);

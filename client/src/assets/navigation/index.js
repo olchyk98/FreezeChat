@@ -9,6 +9,7 @@ import links from '../../links';
 import client from '../../apollo';
 import { cookieControl } from '../../glTools';
 import apiPath from '../../api';
+import themeRunner from '../../theme.runner';
 
 const Button = ({ icon, title, active, url, action }) => (url) ? (
     <Link to={ url } className={ `gl-nav-mat-btn definp${ (!active) ? "" : " active" }` }>
@@ -43,6 +44,7 @@ class App extends Component {
             if(!user) return this.props.failSession();
 
             this.props.updateSession(user);
+            themeRunner();
         }).catch(this.props.failSession);
     }
 
